@@ -1,0 +1,14 @@
+# dns.dae — DNS upstreams and DNS routing.
+dns {
+    upstream {
+        alidns: 'udp://dns.alidns.com:53'
+        googledns: 'tcp+udp://dns.google:53'
+    }
+    routing {
+        request {
+            # China domains via alidns, everything else via googledns.
+            qname(geosite:cn) -> alidns
+            fallback: googledns
+        }
+    }
+}

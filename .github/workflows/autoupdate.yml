@@ -1,0 +1,123 @@
+name: Auto Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */2 * * *"
+
+jobs:
+  check_update:
+    runs-on: ubuntu-latest
+    outputs:
+      update_needed: ${{ steps.check.outputs.update_needed }}
+      pkg_version: ${{ steps.check.outputs.pkg_version }}
+      latest_daed_full: ${{ steps.check.outputs.latest_daed_full }}
+      latest_daed_short: ${{ steps.check.outputs.latest_daed_short }}
+      latest_wing_short: ${{ steps.check.outputs.latest_wing_short }}
+      latest_core_short: ${{ steps.check.outputs.latest_core_short }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Check Upstream Updates
+        id: check
+        run: |
+          DAED_JSON=$(curl -s https://api.github.com/repos/daeuniverse/daed/commits/main)
+          WING_JSON=$(curl -s https://api.github.com/repos/daeuniverse/dae-wing/commits/main)
+          CORE_JSON=$(curl -s https://api.github.com/repos/daeuniverse/dae/commits/main)
+
+          UPSTREAM_DAED_FULL=$(echo "$DAED_JSON" | jq -r '.sha')
+          UPSTREAM_DAED=$(echo "$UPSTREAM_DAED_FULL" | cut -b 1-7)
+          UPSTREAM_WING=$(echo "$WING_JSON" | jq -r '.sha' | cut -b 1-7)
+          UPSTREAM_CORE=$(echo "$CORE_JSON" | jq -r '.sha' | cut -b 1-7)
+
+          CURRENT_DAED=$(grep "PKG_SOURCE_VERSION:=" daed/Makefile | cut -d= -f2 || true)
+          CURRENT_WING=$(grep "WING_VERSION:=wing-" daed/Makefile | sed 's/.*wing-//' | head -n 1 || true)
+          CURRENT_CORE=$(grep "CORE_VERSION:=core-" daed/Makefile | sed 's/.*core-//' | head -n 1 || true)
+
+          echo "Upstream DAED: $UPSTREAM_DAED_FULL, Local: $CURRENT_DAED"
+          echo "Upstream WING: $UPSTREAM_WING, Local: $CURRENT_WING"
+          echo "Upstream CORE: $UPSTREAM_CORE, Local: $CURRENT_CORE"
+
+          NEED_UPDATE=false
+          if [ "$UPSTREAM_DAED_FULL" != "$CURRENT_DAED" ]; then NEED_UPDATE=true; fi
+          if [ "$UPSTREAM_WING" != "$CURRENT_WING" ]; then NEED_UPDATE=true; fi
+          if [ "$UPSTREAM_CORE" != "$CURRENT_CORE" ]; then NEED_UPDATE=true; fi
+
+          if [ "$NEED_UPDATE" = "true" ]; then
+            echo "Update needed"
+            echo "update_needed=true" >> "$GITHUB_OUTPUT"
+
+            DATE_DAED=$(echo "$DAED_JSON" | jq -r '.commit.committer.date')
+            DATE_WING=$(echo "$WING_JSON" | jq -r '.commit.committer.date')
+            DATE_CORE=$(echo "$CORE_JSON" | jq -r '.commit.committer.date')
+            
+            LATEST_ISO_DATE=$(echo -e "$DATE_DAED\n$DATE_WING\n$DATE_CORE" | sort -r | head -n 1)
+            PKG_VERSION=$(date -d "$LATEST_ISO_DATE" +%Y.%m.%d)
+            echo "Selected latest date: $LATEST_ISO_DATE formatted as $PKG_VERSION"
+
+            echo "pkg_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+            echo "latest_daed_full=$UPSTREAM_DAED_FULL" >> "$GITHUB_OUTPUT"
+            echo "latest_daed_short=$UPSTREAM_DAED" >> "$GITHUB_OUTPUT"
+            echo "latest_wing_short=$UPSTREAM_WING" >> "$GITHUB_OUTPUT"
+            echo "latest_core_short=$UPSTREAM_CORE" >> "$GITHUB_OUTPUT"
+          else
+            echo "Everything up to date."
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check_update
+    if: needs.check_update.outputs.update_needed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+
+      - name: Build System Setup
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq dos2unix
+
+      - name: Update Makefile
+        run: |
+          chmod 755 ./daed/files/daed.init ./luci-app-daed/root/etc/init.d/luci_daed ./luci-app-daed/root/etc/hotplug.d/iface/98-daed
+          find . -type f -exec dos2unix {} \; -print
+
+          sed -i '/PKG_VERSION:/d' ./daed/Makefile
+          sed -i "7 a PKG_VERSION:=${{ needs.check_update.outputs.pkg_version }}" ./daed/Makefile
+          
+          sed -i '/DAED_VERSION:/d' ./daed/Makefile
+          sed -i "8 a DAED_VERSION:=daed-${{ needs.check_update.outputs.latest_daed_short }}" ./daed/Makefile
+          
+          sed -i '/WING_VERSION:=/d' ./daed/Makefile
+          sed -i "9 a WING_VERSION:=wing-${{ needs.check_update.outputs.latest_wing_short }}" ./daed/Makefile
+          
+          sed -i '/CORE_VERSION:=/d' ./daed/Makefile
+          sed -i "10 a CORE_VERSION:=core-${{ needs.check_update.outputs.latest_core_short }}" ./daed/Makefile
+          
+          sed -i '/PKG_SOURCE_VERSION:/d' ./daed/Makefile
+          sed -i "17 a PKG_SOURCE_VERSION:=${{ needs.check_update.outputs.latest_daed_full }}" ./daed/Makefile
+
+      - name: Commit file
+        run: |
+          git config --global user.email simonsqiu@foxmail.com
+          git config --global user.name SimonsQiu
+          git add .
+          git commit -m "Update $(date +%Y/%m/%d\ %H:%M:%S\ %Z)" -a
+        continue-on-error: true
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{secrets.ACTIONS_DEPLOY_KEY}}
+          branch: kix
+        continue-on-error: true
+
+

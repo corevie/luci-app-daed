@@ -1,0 +1,35 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
+ */
+
+package outbound
+
+import (
+	// Register the ech-workers ECH websocket tunnel node type ("echws://").
+	_ "github.com/daeuniverse/dae/component/outbound/dialer/echws"
+	_ "github.com/daeuniverse/outbound/dialer/anytls"
+	_ "github.com/daeuniverse/outbound/dialer/http"
+	_ "github.com/daeuniverse/outbound/dialer/hysteria2"
+	_ "github.com/daeuniverse/outbound/dialer/juicity"
+	_ "github.com/daeuniverse/outbound/dialer/naive"
+	_ "github.com/daeuniverse/outbound/dialer/shadowsocks"
+	_ "github.com/daeuniverse/outbound/dialer/shadowsocksr"
+	_ "github.com/daeuniverse/outbound/dialer/socks"
+	_ "github.com/daeuniverse/outbound/dialer/trojan"
+	_ "github.com/daeuniverse/outbound/dialer/tuic"
+	_ "github.com/daeuniverse/outbound/dialer/v2ray"
+	_ "github.com/daeuniverse/outbound/protocol/anytls"
+	_ "github.com/daeuniverse/outbound/protocol/hysteria2"
+	_ "github.com/daeuniverse/outbound/protocol/juicity"
+	_ "github.com/daeuniverse/outbound/protocol/shadowsocks"
+	_ "github.com/daeuniverse/outbound/protocol/shadowsocks_2022"
+	_ "github.com/daeuniverse/outbound/protocol/trojanc"
+	_ "github.com/daeuniverse/outbound/protocol/tuic"
+	_ "github.com/daeuniverse/outbound/protocol/vless"
+	_ "github.com/daeuniverse/outbound/protocol/vmess"
+	_ "github.com/daeuniverse/outbound/transport/shadowtls"
+	_ "github.com/daeuniverse/outbound/transport/simpleobfs"
+	_ "github.com/daeuniverse/outbound/transport/tls"
+	_ "github.com/daeuniverse/outbound/transport/ws"
+)

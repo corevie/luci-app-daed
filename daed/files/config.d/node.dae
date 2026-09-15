@@ -1,0 +1,30 @@
+# node.dae — nodes and subscriptions.
+#
+# Supported subscription forms include plain http(s)://, base64, SIP008,
+# file:// (relative to this directory), cfMac nodes.json and GitHub Gists:
+#
+#   # Public gist holding a cfMac nodes.json library (auto-picks the file):
+#   ech_nodes: 'gist://<gistID>'
+#   # Private gist, explicit file:
+#   ech_nodes: 'gist://<github-token>@<gistID>/nodes.json'
+#   # Persist the last successful fetch under persist.d/ for offline boot:
+#   ech_nodes: 'gist-file://<github-token>@<gistID>/nodes.json'
+#   # Local cfMac node library:
+#   ech_nodes: 'file://nodes.json'
+#
+# Gist / nodes.json entries become echws:// nodes (one per cfMac node) and
+# can be referenced by groups and routing rules like any other node.
+
+subscription {
+}
+
+node {
+}
+
+group {
+    proxy {
+        filter: subtag(ech_nodes)
+        filter: name(keyword: 香港, keyword: 台湾, keyword: 日本, keyword: 美国)
+        policy: min_moving_avg
+    }
+}

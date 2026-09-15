@@ -1,0 +1,21 @@
+# route.dae — traffic routing.
+routing {
+    # Network managers in localhost should be direct to avoid false negative
+    # network connectivity check when binding to WAN.
+    pname(NetworkManager) -> direct
+
+    # Keep broadcast/multicast/LAN on the LAN.
+    dip(224.0.0.0/3, 'ff00::/8') -> direct
+    dip(geoip:private) -> direct
+
+    # QUIC usually consumes too much cpu/mem resources.
+    l4proto(udp) && dport(443) -> block
+
+    # China traffic direct.
+    dip(geoip:cn) -> direct
+    domain(geosite:cn) -> direct
+
+    # Everything else through the proxy group (nodes from subscriptions,
+    # e.g. the echws:// nodes synced from a cfMac nodes.json gist).
+    fallback: proxy
+}

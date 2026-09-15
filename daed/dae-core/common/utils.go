@@ -1,0 +1,403 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
+ */
+
+package common
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+	"net/netip"
+	"net/url"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+	"unsafe"
+
+	obcommon "github.com/daeuniverse/outbound/common"
+	"github.com/daeuniverse/outbound/netproxy"
+
+	internal "github.com/daeuniverse/dae/pkg/ebpf_internal"
+	dnsmessage "github.com/miekg/dns"
+	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
+)
+
+type UrlOrEmpty struct {
+	Url   *url.URL
+	Empty bool
+}
+
+func ARangeU32(n uint32) []uint32 {
+	ret := make([]uint32, n)
+	for i := range n {
+		ret[i] = i
+	}
+	return ret
+}
+
+func Ipv6ByteSliceToUint32Array(_ip []byte) (ip [4]uint32) {
+	for j := 0; j < 16; j += 4 {
+		ip[j/4] = internal.NativeEndian.Uint32(_ip[j : j+4])
+	}
+	return ip
+}
+
+// Deduplicate re-exports from outbound/common to eliminate duplication.
+var Deduplicate = obcommon.Deduplicate
+
+// Base64UrlDecode re-exports from outbound/common to eliminate duplication.
+var Base64UrlDecode = obcommon.Base64UrlDecode
+
+// Base64StdDecode re-exports from outbound/common to eliminate duplication.
+var Base64StdDecode = obcommon.Base64StdDecode
+
+// SetValue re-exports from outbound/common to eliminate duplication.
+var SetValue = obcommon.SetValue
+
+func ParseMac(mac string) (addr [6]byte, err error) {
+	fields := strings.SplitN(mac, ":", 6)
+	if len(fields) != 6 {
+		return addr, fmt.Errorf("invalid mac: %v", mac)
+	}
+	for i, field := range fields {
+		v, err := hex.DecodeString(field)
+		if err != nil {
+			return addr, fmt.Errorf("parse mac %v: %w", mac, err)
+		}
+		if len(v) != 1 {
+			return addr, fmt.Errorf("invalid mac: %v", mac)
+		}
+		addr[i] = v[0]
+	}
+	return addr, nil
+}
+
+func ParsePortRange(pr string) (portRange [2]uint16, err error) {
+	fields := strings.SplitN(pr, "-", 2)
+	for i, field := range fields {
+		if field == "" {
+			return portRange, fmt.Errorf("bad port range: %v", pr)
+		}
+		port, err := strconv.Atoi(field)
+		if err != nil {
+			return portRange, err
+		}
+		if port < 0 || port > 0xffff {
+			return portRange, fmt.Errorf("port %v exceeds uint16 range", port)
+		}
+		portRange[i] = uint16(port)
+	}
+	if len(fields) == 1 {
+		portRange[1] = portRange[0]
+	}
+	return portRange, nil
+}
+
+func FuzzyDecode(to any, val string) bool {
+	v := reflect.Indirect(reflect.ValueOf(to))
+	switch v.Kind() {
+	case reflect.Int:
+		i, err := strconv.ParseInt(val, 0, strconv.IntSize)
+		if err != nil {
+			return false
+		}
+		v.SetInt(i)
+	case reflect.Int8:
+		i, err := strconv.ParseInt(val, 0, 8)
+		if err != nil {
+			return false
+		}
+		v.SetInt(i)
+	case reflect.Int16:
+		i, err := strconv.ParseInt(val, 0, 16)
+		if err != nil {
+			return false
+		}
+		v.SetInt(i)
+	case reflect.Int32:
+		i, err := strconv.ParseInt(val, 0, 32)
+		if err != nil {
+			return false
+		}
+		v.SetInt(i)
+	case reflect.Int64:
+		switch v.Interface().(type) {
+		case time.Duration:
+			duration, err := time.ParseDuration(val)
+			if err != nil {
+				return false
+			}
+			v.Set(reflect.ValueOf(duration))
+		default:
+			i, err := strconv.ParseInt(val, 0, 64)
+			if err != nil {
+				return false
+			}
+			v.SetInt(i)
+		}
+	case reflect.Uint:
+		i, err := strconv.ParseUint(val, 0, strconv.IntSize)
+		if err != nil {
+			return false
+		}
+		v.SetUint(i)
+	case reflect.Uint8:
+		i, err := strconv.ParseUint(val, 0, 8)
+		if err != nil {
+			return false
+		}
+		v.SetUint(i)
+	case reflect.Uint16:
+		i, err := strconv.ParseUint(val, 0, 16)
+		if err != nil {
+			return false
+		}
+		v.SetUint(i)
+	case reflect.Uint32:
+		i, err := strconv.ParseUint(val, 0, 32)
+		if err != nil {
+			return false
+		}
+		v.SetUint(i)
+	case reflect.Uint64:
+		i, err := strconv.ParseUint(val, 0, 64)
+		if err != nil {
+			return false
+		}
+		v.SetUint(i)
+	case reflect.Bool:
+		switch strings.ToLower(val) {
+		case "true", "t", "1", "y", "yes", "on":
+			v.SetBool(true)
+		case "false", "f", "0", "n", "no", "off":
+			v.SetBool(false)
+		default:
+			return false
+		}
+	case reflect.String:
+		v.SetString(val)
+	case reflect.Struct:
+		switch v.Interface().(type) {
+		case UrlOrEmpty:
+			if val == "" {
+				v.Set(reflect.ValueOf(UrlOrEmpty{
+					Url:   nil,
+					Empty: true,
+				}))
+			} else {
+				u, err := url.Parse(val)
+				if err != nil {
+					return false
+				}
+				v.Set(reflect.ValueOf(UrlOrEmpty{
+					Url:   u,
+					Empty: false,
+				}))
+			}
+		default:
+			return false
+		}
+	case reflect.Slice:
+		switch v.Interface().(type) {
+		case []string:
+			v.Set(reflect.ValueOf(strings.Split(val, ",")))
+		case []time.Duration:
+			var durations []time.Duration
+			duration, err := time.ParseDuration(val)
+			if err != nil {
+				return false
+			}
+			durations = append(durations, duration)
+			v.Set(reflect.ValueOf(durations))
+		default:
+			return false
+		}
+	default:
+		return false
+	}
+	return true
+}
+
+func EnsureFileInSubDir(filePath string, dir string) (err error) {
+	fileDir := filepath.Dir(filePath)
+	if len(dir) == 0 {
+		return fmt.Errorf("bad dir: %v", dir)
+	}
+	rel, err := filepath.Rel(dir, fileDir)
+	if err != nil {
+		return err
+	}
+	if strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("file is out of scope: %v", rel)
+	}
+	return nil
+}
+
+func MapKeys(m any) (keys []string, err error) {
+	v := reflect.ValueOf(m)
+	if v.Kind() != reflect.Map {
+		return nil, fmt.Errorf("MapKeys requires map[string]*")
+	}
+	if v.Type().Key().Kind() != reflect.String {
+		return nil, fmt.Errorf("MapKeys requires map[string]*")
+	}
+	_keys := v.MapKeys()
+	keys = make([]string, 0, len(_keys))
+	for _, k := range _keys {
+		keys = append(keys, k.String())
+	}
+	return keys, nil
+}
+
+// GetTagFromLinkLikePlaintext re-exports from outbound/common to eliminate duplication.
+var GetTagFromLinkLikePlaintext = obcommon.GetTagFromLinkLikePlaintext
+
+// BoolToString re-exports from outbound/common to eliminate duplication.
+var BoolToString = obcommon.BoolToString
+
+func ConvergeAddr(addr netip.Addr) netip.Addr {
+	if addr.Is4In6() {
+		addr = netip.AddrFrom4(addr.As4())
+	}
+	return addr
+}
+
+func ConvergeAddrPort(addrPort netip.AddrPort) netip.AddrPort {
+	if addrPort.Addr().Is4In6() {
+		return netip.AddrPortFrom(netip.AddrFrom4(addrPort.Addr().As4()), addrPort.Port())
+	}
+	return addrPort
+}
+
+func NewGcm(key []byte) (cipher.AEAD, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
+}
+
+func AddrToDnsType(addr netip.Addr) uint16 {
+	if addr.Is4() {
+		return dnsmessage.TypeA
+	} else {
+		return dnsmessage.TypeAAAA
+	}
+}
+
+// Htons converts the unsigned short integer from host byte order to network byte order (big-endian).
+// This is used when communicating with eBPF programs which expect network byte order.
+func Htons(i uint16) uint16 {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, i)
+	return *(*uint16)(unsafe.Pointer(&b[0]))
+}
+
+func GetDefaultIfnames() (defaultIfs []string, err error) {
+	linkList, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+nextLink:
+	for _, link := range linkList {
+		if link.Attrs().Flags&unix.RTF_UP != unix.RTF_UP {
+			// Interface is down.
+			continue
+		}
+		for _, family := range []int{unix.AF_INET, unix.AF_INET6} {
+			rs, err := netlink.RouteList(link, family)
+			if err != nil {
+				return nil, err
+			}
+			for _, route := range rs {
+
+				// In netlink v1.3.1+, default routes have Dst as 0.0.0.0/0 or ::/0
+				// instead of nil (behavior change from v1.1.0).
+				isDefault := false
+				if route.Dst == nil {
+					// Old behavior: nil Dst means default route
+					isDefault = true
+				} else if route.Dst.IP.IsUnspecified() && route.Dst.Mask != nil {
+					// New behavior: 0.0.0.0/0 or ::/0 means default route
+
+					ones, _ := route.Dst.Mask.Size()
+					if ones == 0 {
+						isDefault = true
+					}
+				}
+
+				if isDefault {
+					defaultIfs = append(defaultIfs, link.Attrs().Name)
+					continue nextLink
+				}
+			}
+		}
+	}
+	return Deduplicate(defaultIfs), nil
+}
+
+func MagicNetwork(network string, mark uint32, mptcp bool) string {
+	return MagicNetworkWithIPVersion(network, mark, mptcp, "")
+}
+
+func MagicNetworkWithIPVersion(network string, mark uint32, mptcp bool, ipVersion string) string {
+	if mark == 0 && !mptcp && ipVersion == "" {
+		return network
+	}
+	return netproxy.MagicNetwork{
+		Network:   network,
+		Mark:      mark,
+		Mptcp:     mptcp,
+		IPVersion: ipVersion,
+	}.Encode()
+}
+
+const InternalSoMarkFromDae uint32 = 0x100
+
+// EffectiveSoMarkFromDae returns the socket mark dae should use for its own
+// outbound sockets. When the user leaves so_mark_from_dae unset, dae still
+// needs a private mark to prevent wan_egress from re-capturing control-plane
+// UDP traffic and recursively feeding it back into userspace.
+func EffectiveSoMarkFromDae(mark uint32) uint32 {
+	if mark != 0 {
+		return mark
+	}
+	return InternalSoMarkFromDae
+}
+
+// ResolveSoMarkFromDae returns the effective socket mark and whether dae had
+// to auto-select an internal mark because the user left so_mark_from_dae
+// unspecified.
+func ResolveSoMarkFromDae(mark uint32, explicitlyConfigured bool) (effective uint32, autoSelected bool) {
+	if mark != 0 {
+		return mark, false
+	}
+	return InternalSoMarkFromDae, !explicitlyConfigured
+}
+
+func IsValidHttpMethod(method string) bool {
+	switch method {
+	case "GET", "POST", "PUT", "PATCH", "DELETE", "COPY", "HEAD", "OPTIONS", "LINK", "UNLINK", "PURGE", "LOCK", "UNLOCK", "PROPFIND", "CONNECT", "TRACE":
+		return true
+	default:
+		return false
+	}
+}
+
+func StringSet(list []string) map[string]struct{} {
+	m := make(map[string]struct{})
+	for _, s := range list {
+		m[s] = struct{}{}
+	}
+	return m
+}
+
+// GenerateCertChainHash re-exports from outbound/common to eliminate duplication.
+var GenerateCertChainHash = obcommon.GenerateCertChainHash

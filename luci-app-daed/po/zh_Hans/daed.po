@@ -1,0 +1,242 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "DAED"
+msgstr "DAED"
+
+msgid "DAE is a Linux high-performance transparent proxy solution based on eBPF, And DAED is a modern dashboard for dae."
+msgstr "DAE 是一个基于 eBPF 的 Linux 高性能透明代理解决方案。本构建提供独立版 dae 二进制（runfiles 模式，/etc/dae）。"
+
+msgid "Base Setting"
+msgstr "基本设置"
+
+msgid "Dashboard"
+msgstr "仪表板"
+
+msgid "Logs"
+msgstr "日志"
+
+msgid "Clear logs"
+msgstr "清空日志"
+
+msgid "RUNNING"
+msgstr "运行中"
+
+msgid "NOT RUNNING"
+msgstr "未运行"
+
+msgid "Collecting data..."
+msgstr "收集数据..."
+
+msgid "Logfile retention count"
+msgstr "日志文件保留数量"
+
+msgid "Logfile Max Size (MB)"
+msgstr "日志文件大小(MB)"
+
+msgid "Enable Auto Subscribe Update"
+msgstr "启用订阅自动更新"
+
+msgid "Update Cycle"
+msgstr "更新周期"
+
+msgid "Update Time (Every Day)"
+msgstr "更新时间(每天)"
+
+msgid "Username"
+msgstr "用户名"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "ECH Tunnel"
+msgstr "ECH 隧道"
+
+msgid "Relay traffic through a wss tunnel server using TLS 1.3 Encrypted Client Hello (ECH). The tunnel can serve a local SOCKS5/HTTP proxy and/or be used as an echws:// node in dae routing."
+msgstr "通过 TLS 1.3 加密客户端问候（ECH）经 wss 隧道服务器中转流量。隧道可提供本地 SOCKS5/HTTP 代理，也可作为 echws:// 节点用于 dae 路由。"
+
+msgid "ECH Tunnel Settings"
+msgstr "ECH 隧道设置"
+
+msgid "When enabled, the ech_tunnel runfile is generated and the daemon is restarted. Turning it off removes the runfile."
+msgstr "启用后将生成 ech_tunnel 运行文件并重启守护进程；关闭时会删除该文件。"
+
+msgid "Tunnel Server"
+msgstr "隧道服务器"
+
+msgid "The wss tunnel server in host:port[/path] form, e.g. your-worker.workers.dev:443/tunnel"
+msgstr "wss 隧道服务器，格式为 host:port[/路径]，例如 your-worker.workers.dev:443/tunnel"
+
+msgid "Server is required when ECH tunnel is enabled"
+msgstr "启用 ECH 隧道时必须填写服务器"
+
+msgid "Server must not contain quotes or control characters"
+msgstr "服务器地址不能包含引号或控制字符"
+
+msgid "Invalid server, expected host:port[/path]"
+msgstr "无效的服务器地址，应为 host:port[/路径] 格式"
+
+msgid "Port must be within 1..65535"
+msgstr "端口必须在 1..65535 之间"
+
+msgid "Local Proxy Listen Address"
+msgstr "本地代理监听地址"
+
+msgid "Local SOCKS5/HTTP proxy address. Both protocols share this port; SOCKS5 UDP is supported for DNS only (answered via DoH over ECH)."
+msgstr "本地 SOCKS5/HTTP 代理监听地址。两种协议共用同一端口；SOCKS5 UDP 仅支持 DNS（经 ECH 上的 DoH 应答）。"
+
+msgid "Listen address is required"
+msgstr "必须填写监听地址"
+
+msgid "Invalid listen address, expected host:port (e.g. 127.0.0.1:1080)"
+msgstr "无效的监听地址，应为 host:port（例如 127.0.0.1:1080）"
+
+msgid "Fixed Server IP (optional)"
+msgstr "固定服务器 IP（可选）"
+
+msgid "Pin the TCP connection to this IP while keeping the TLS SNI of the server, e.g. a Cloudflare anycast IP."
+msgstr "将 TCP 连接固定到此 IP，同时保留服务器的 TLS SNI，例如 Cloudflare 任播 IP。"
+
+msgid "Invalid IP address"
+msgstr "无效的 IP 地址"
+
+msgid "Auth Token (optional)"
+msgstr "认证令牌（可选）"
+
+msgid "Sent as the websocket subprotocol for authentication."
+msgstr "作为 websocket 子协议发送，用于认证。"
+
+msgid "DoH Server for ECH Config"
+msgstr "获取 ECH 配置的 DoH 服务器"
+
+msgid "DoH server used to fetch the ECH config (HTTPS DNS record)."
+msgstr "用于获取 ECH 配置（HTTPS DNS 记录）的 DoH 服务器。"
+
+msgid "ECH Config Domain"
+msgstr "ECH 配置域名"
+
+msgid "Domain queried for its HTTPS (type 65) record carrying the ECH config list."
+msgstr "查询其 HTTPS（类型 65）记录以获取 ECH 配置列表的域名。"
+
+msgid "Also Generate echws:// Node"
+msgstr "同时生成 echws:// 节点"
+
+msgid "Additionally write an echws:// node and an \"ech_tunnel\" group into the runfile, so routing rules can use the outbound ech_tunnel (e.g. fallback: ech_tunnel)."
+msgstr "在运行文件中额外写入一个 echws:// 节点和 \"ech_tunnel\" 分组，供路由规则使用出站 ech_tunnel（例如 fallback: ech_tunnel）。"
+
+msgid "Generated Runfile Path"
+msgstr "生成的运行文件路径"
+
+msgid "Path of the generated dae config fragment. Keep the default for daed (config directory mode), or set /etc/dae/config.d/ech_tunnel.dae for standalone dae with an include directive."
+msgstr "生成的 dae 配置片段路径。daed（配置目录模式）保持默认即可；独立 dae 配合 include 指令时请设为 /etc/dae/config.d/ech_tunnel.dae。"
+
+msgid "Runfile path is required"
+msgstr "必须填写运行文件路径"
+
+msgid "Runfile path must be absolute and must not contain quotes"
+msgstr "运行文件路径必须为绝对路径且不能包含引号"
+
+msgid "ENABLED"
+msgstr "已启用"
+
+msgid "DISABLED"
+msgstr "已停用"
+
+msgid "Local proxy"
+msgstr "本地代理"
+
+msgid "LISTENING"
+msgstr "监听中"
+
+msgid "NOT LISTENING"
+msgstr "未监听"
+
+msgid "Runfile"
+msgstr "运行文件"
+
+msgid "GENERATED"
+msgstr "已生成"
+
+msgid "MISSING"
+msgstr "缺失"
+
+msgid "Daemon"
+msgstr "守护进程"
+
+msgid "dae is a Linux high-performance transparent proxy solution based on eBPF. This build ships the standalone dae binary (runfiles mode, /etc/dae)."
+msgstr "dae 是基于 eBPF 的 Linux 高性能透明代理解决方案。本构建提供独立版 dae 二进制（runfiles 模式，/etc/dae）。"
+
+msgid "Config Entry File"
+msgstr "配置入口文件"
+
+msgid "Main dae config file (include-style). Fragments under /etc/dae/config.d/ are merged automatically; edit them on the Config Files page."
+msgstr "dae 主配置文件（include 形式）。/etc/dae/config.d/ 下的片段会自动合并；请在「配置文件」页编辑它们。"
+
+msgid "Update Cycle (Weekday)"
+msgstr "更新周期（星期）"
+
+msgid "Cron weekday: * = every day, 1-5 = Mon-Fri, 0/7 = Sunday."
+msgstr "Cron 星期：* = 每天，1-5 = 周一至周五，0/7 = 周日。"
+
+msgid "Periodically hot-reload dae so subscriptions (e.g. the ECH nodes gist) are re-fetched."
+msgstr "周期性热重载 dae，以便重新拉取订阅（例如 ECH 节点 gist）。"
+
+msgid "Config Files"
+msgstr "配置文件"
+
+msgid "Edit the dae runfiles under /etc/dae/. Changes apply after \"Save & Apply\" (hot reload)."
+msgstr "编辑 /etc/dae/ 下的 dae 运行文件。保存并应用后热重载生效。"
+
+msgid "Save & Apply"
+msgstr "保存并应用"
+
+msgid "Gist Sync (cfMac nodes.json)"
+msgstr "Gist 同步（cfMac nodes.json）"
+
+msgid "Enable Gist Sync"
+msgstr "启用 Gist 同步"
+
+msgid "Sync the cfMac nodes.json node library from a GitHub Gist as a dae subscription. Every node becomes an echws:// outbound (name, token, preferred IPs, ECH DoH are all mapped)."
+msgstr "把 GitHub Gist 中的 cfMac nodes.json 节点库同步为 dae 订阅。每个节点都会转换成 echws:// 出站（名称、令牌、优选 IP、ECH DoH 全部映射）。"
+
+msgid "Gist ID"
+msgstr "Gist ID"
+
+msgid "The gist holding nodes.json (the ID from its URL)."
+msgstr "存放 nodes.json 的 Gist（取其 URL 中的 ID）。"
+
+msgid "Gist ID is required when Gist sync is enabled"
+msgstr "启用 Gist 同步时必须填写 Gist ID"
+
+msgid "Invalid Gist ID"
+msgstr "无效的 Gist ID"
+
+msgid "GitHub Token (for private gists)"
+msgstr "GitHub Token（私有 Gist 用）"
+
+msgid "Personal access token with the gist scope. Leave empty for public gists."
+msgstr "具有 gist 权限的个人访问令牌。公开 Gist 留空即可。"
+
+msgid "Gist Filename"
+msgstr "Gist 文件名"
+
+msgid "File name inside the gist."
+msgstr "Gist 中的文件名。"
+
+msgid "Subscription Tag"
+msgstr "订阅标签"
+
+msgid "dae subscription tag. Reference it in groups via filter: subtag(<tag>), e.g. filter: subtag(ech_nodes)."
+msgstr "dae 订阅标签。在分组中通过 filter: subtag(<标签>) 引用，例如 filter: subtag(ech_nodes)。"
+
+msgid "Persist Last Fetch"
+msgstr "持久化最近一次拉取"
+
+msgid "Use gist-file:// so the last successful fetch is stored under /etc/dae/persist.d/ as an offline fallback."
+msgstr "使用 gist-file://，最近一次成功拉取的内容会存到 /etc/dae/persist.d/ 作为离线回退。"
+
+msgid "Path of the generated dae config fragment. The default lives in the runfiles directory of the standalone dae build (/etc/dae/config.d/, merged by the include directive in config.dae)."
+msgstr "生成的 dae 配置片段路径。默认位于独立版 dae 的运行文件目录（/etc/dae/config.d/，由 config.dae 的 include 指令合并）。"

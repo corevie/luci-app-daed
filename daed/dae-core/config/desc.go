@@ -1,0 +1,111 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
+ */
+
+package config
+
+type Desc map[string]string
+
+var SectionSummaryDesc = Desc{
+	"subscription": "Subscriptions defined here will be resolved as nodes and merged as a part of the global node pool.\nSupport to give the subscription a tag, and filter nodes from a given subscription in the group section.",
+	"node":         "Nodes defined here will be merged as a part of the global node pool.",
+	"dns":          "See more at https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/dns.md.",
+	"group":        "Node group. Groups defined here can be used as outbounds in section \"routing\".",
+	"ech_tunnel":   "Optional ECH websocket tunnel (ech-workers). When set, dae runs the tunnel client and (if listen is set) a local SOCKS5/HTTP proxy that relays through it.\nThe tunnel can also be used as a node link: 'echws://host:port/path?token=...&ip=...&dns=...&ech=...'.",
+	"routing": `Traffic follows this routing. See https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/routing.md for full examples.
+Notice: domain traffic split will fail if DNS traffic is not taken over by dae.
+Built-in outbound: direct, must_direct, block.
+Available functions: domain, sip, dip, sport, dport, ipversion, l4proto, pname, mac.
+Available keys in domain function: suffix, keyword, regex, full. No key indicates suffix.
+domain: Match domain.
+sip: Match source IP. CIDR format is also supported.
+dip: Match dest IP. CIDR format is also supported.
+sport: Match source port. Range like 8000-9000 is also supported.
+dport: Match dest port. Range like 8000-9000 is also supported.
+ipversion: Match IP version. Available values: 4, 6.
+l4proto: Match level 4 protocol. Available values: tcp, udp.
+pname: Match process name. It only works on WAN mode and for localhost programs.
+mac: Match source MAC address. It works on LAN mode.`,
+}
+
+var SectionDescription = map[string]Desc{
+	"GlobalDesc":    GlobalDesc,
+	"DnsDesc":       DnsDesc,
+	"GroupDesc":     GroupDesc,
+	"EchTunnelDesc": EchTunnelDesc,
+}
+
+var GlobalDesc = Desc{
+	"tproxy_port":           "tproxy port to listen on. It is NOT a HTTP/SOCKS port, and is just used by eBPF program.\nIn normal case, you do not need to use it.",
+	"tproxy_port_protect":   "Set it true to protect tproxy port from unsolicited traffic. Set it false to allow users to use self-managed iptables tproxy rules.",
+	"so_mark_from_dae":      "Socket mark for dae-originated traffic. If omitted, dae auto-selects an internal mark to prevent UDP self-capture. Set a non-zero value to override that mark. Set 0 explicitly to keep the internal protection mark without the unset warning.",
+	"log_level":             "Log level: error, warn, info, debug, trace.",
+	"tcp_check_url":         "Node connectivity check.\nHost of URL should have both IPv4 and IPv6 if you have double stack in local.\nConsidering traffic consumption, it is recommended to choose a site with anycast IP and less response.",
+	"tcp_check_http_method": "The HTTP request method to `tcp_check_url`. Use 'HEAD' by default because some server implementations bypass accounting for this kind of traffic.",
+	"udp_check_dns":         "This DNS will be used to check UDP connectivity of nodes. And if dns_upstream below contains tcp, it also be used to check TCP DNS connectivity of nodes.\nThis DNS should have both IPv4 and IPv6 if you have double stack in local.",
+	"check_interval":        "Interval of connectivity check for TCP and UDP",
+	"check_tolerance":       "Group will switch node only when new_latency <= old_latency - tolerance.",
+	"lan_interface":         "The LAN interface to bind. Use it if you want to proxy LAN.",
+	"wan_interface":         "The WAN interface to bind. Use it if you want to proxy localhost. Use \"auto\" to auto detect.",
+	"allow_insecure":        "Allow insecure TLS certificates. It is not recommended to turn it on unless you have to.",
+	"dial_mode": `Optional values of dial_mode are:
+1. "ip". Dial proxy using the IP from DNS directly. This allows your ipv4, ipv6 to choose the optimal path respectively, and makes the IP version requested by the application meet expectations. For example, if you use curl -4 ip.sb, you will request IPv4 via proxy and get a IPv4 echo. And curl -6 ip.sb will request IPv6. This may solve some weird full-cone problem if your are be your node support that.Sniffing will be disabled in this mode.
+2. "domain". Dial proxy using the domain from sniffing. This will relieve DNS pollution problem to a great extent if have impure DNS environment. Generally, this mode brings faster proxy response time because proxy will re-resolve the domain in remote, thus get better IP result to connect. This policy does not impact routing. That is to say, domain rewrite will be after traffic split of routing and dae will not re-route it.
+3. "domain+". Based on domain mode but do not check the reality of sniffed domain. It is useful for users whose DNS requests do not go through dae but want faster proxy response time. Notice that, if DNS requests do not go through dae, dae cannot split traffic by domain.
+4. "domain++". Based on domain+ mode but force to re-route traffic using sniffed domain to partially recover domain based traffic split ability. It doesn't work for direct traffic and consumes more CPU resources.`,
+	"disable_waiting_network":      "Disable waiting for network before pulling subscriptions.",
+	"disable_thp":                  "Disable transparent huge pages for the dae process. This reduces RSS inflation for dae userspace memory without changing system-wide THP settings.",
+	"auto_config_kernel_parameter": "Automatically configure Linux kernel parameters like ip_forward and send_redirects. Check out https://github.com/daeuniverse/dae/blob/main/docs/en/user-guide/kernel-parameters.md to see what will dae do.",
+	"sniffing_timeout":             "Timeout to waiting for first data sending for sniffing. It is always 0 if dial_mode is ip. Default 30ms is suitable for most networks. Increase to 100-300ms for high-latency networks.",
+	"tls_implementation":           "TLS implementation. \"tls\" is to use Go's crypto/tls. \"utls\" is to use uTLS, which can imitate browser's Client Hello.",
+	"utls_imitate":                 "The Client Hello ID for uTLS to imitate. This takes effect only if tls_implementation is utls. See more: https://github.com/daeuniverse/dae/blob/331fa23c16/component/outbound/transport/tls/utls.go#L17",
+	"mptcp":                        "Enable Multipath TCP.  If is true, dae will try to use MPTCP to connect all nodes, but it will only take effects when the node supports MPTCP. It can use for load balance and failover to multiple interfaces and IPs.",
+	"bootstrap_resolver":           "Explicit DNS resolver used only for bootstrap lookups that must happen before dae DNS routing is available, such as resolving named DNS upstream hosts and dial_mode real-domain probes. When unset, dae falls back to 119.29.29.29:53 and 223.5.5.5:53 in order. Setting bootstrap_resolver disables those defaults and uses only the configured resolver.",
+	"bpf_conn_state_map_size":      "Maximum entries for the shared TCP/UDP eBPF connection-state map. Lower values reduce locked kernel memory but also lower the maximum tracked concurrent flows. This takes effect on fresh eBPF load or restart; same-port reload keeps the live map to preserve connections.",
+}
+
+var DnsDesc = Desc{
+	"ipversion_prefer": "For example, if ipversion_prefer is 4 and the domain name has both type A and type AAAA records, the dae will only respond to type A queries and response empty answer to type AAAA queries.",
+	"fixed_domain_ttl": "Give a fixed ttl for domains. Zero means that dae will request to upstream every time and not cache DNS results for these domains.",
+	"upstream":         "Value can be scheme://host:port, where the scheme can be tcp/udp/tcp+udp.\nIf host is a domain and has both IPv4 and IPv6 record, dae will automatically choose IPv4 or IPv6 to use according to group policy (such as min latency policy).\nPlease make sure DNS traffic will go through and be forwarded by dae, which is REQUIRED for domain routing.\nIf dial_mode is \"ip\", the upstream DNS answer SHOULD NOT be polluted, so domestic public DNS is not recommended.",
+	"request": `DNS request routing for ordinary client traffic uses qname and qtype.
+Built-in outbounds for ordinary DNS requests: asis, reject.
+Additional internal dae selectors are available in the same request block:
+sub matches subscription fetch requests.
+node matches node host resolution requests.
+subnode matches host resolution for nodes that came from a subscription, and is checked before node.
+Internal selectors only affect dae's own requests, must point to names defined in dns.upstream, do not use fallback, and cannot be mixed with qname/qtype in the same rule.`,
+	"response": `DNS responses will follow this routing.
+Built-in outbound: accept, reject.
+Available functions: qname, qtype, ip, upstream`,
+}
+
+var GroupDesc = Desc{
+	"filter": `Filter nodes from the global node pool defined by the "subscription" and "node" sections.
+Available functions: name, subtag. Not operator is supported.
+Available keys in name function: keyword, regex. No key indicates full match.
+Available keys in subtag function: regex. No key indicates full match.`,
+	"policy": `Dialer selection policy. For each new connection, select a node as dialer from group by this policy.
+Available values: random, fixed, min, min_avg10, min_moving_avg.
+random: Select randomly.
+fixed: Select the fixed node. Connectivity check will be disabled.
+min: Select node by the latency of last check.
+min_avg10: Select node by the average of latencies of last 10 checks.
+min_moving_avg: Select node by the moving average of latencies of checks, which means more recent latencies have higher weight.
+`,
+	"tcp_check_url":         "Override global config.",
+	"tcp_check_http_method": "Override global config.",
+	"udp_check_dns":         "Override global config.",
+	"check_interval":        "Override global config.",
+	"check_tolerance":       "Override global config.",
+}
+
+var EchTunnelDesc = Desc{
+	"listen":     "Local SOCKS5/HTTP proxy listen address of the tunnel, e.g. '127.0.0.1:1080'.\nThe proxy auto-detects SOCKS5 and HTTP clients on the same port; UDP ASSOCIATE is supported for DNS only (answered via DoH over ECH).",
+	"server":     "The wss tunnel server in 'host:port[/path]' form, e.g. 'your-worker.workers.dev:443/tunnel'. Required if this section is present.",
+	"ip":         "Optional. Pin the TCP connection toward the tunnel server to this IP while keeping the TLS SNI / ECH name, e.g. a Cloudflare anycast IP.",
+	"token":      "Optional. Authentication token, sent as the websocket subprotocol.",
+	"dns":        "DoH server used to fetch the ECH config, e.g. 'dns.alidns.com/dns-query'. Default: 'dns.alidns.com/dns-query'.",
+	"ech_domain": "Domain queried for its HTTPS (type 65) DNS record carrying the ECH config list. Default: 'cloudflare-ech.com'.",
+}

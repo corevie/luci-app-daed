@@ -1,0 +1,68 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2023 Tianling Shen <cnsztl@immortalwrt.org>
+# Companion init for luci-app-daed: geo asset env injection and resolv.conf
+# isolation for the standalone dae binary. (Subscription auto-update cron is
+# managed by /etc/init.d/dae itself.)
+
+USE_PROCD=0
+START=98
+
+CONF="daed"
+RESOLV_DAED="/tmp/resolv.conf.dae"
+
+hijack_resolv_conf() {
+    grep -q ' /tmp/resolv\.conf ' /proc/mounts && return 0
+
+    grep -E '^(search|domain) ' /tmp/resolv.conf > "$RESOLV_DAED" 2>/dev/null
+
+    local dns_list LOGICAL_WAN
+    . /lib/functions/network.sh
+    network_find_wan LOGICAL_WAN 2>/dev/null
+    if [ -n "$LOGICAL_WAN" ]; then
+        dns_list=$(ubus call "network.interface.$LOGICAL_WAN" status 2>/dev/null | \
+            jsonfilter -e '@["dns-server"][*]' 2>/dev/null)
+    fi
+
+    if [ -z "$dns_list" ] && [ -f "/tmp/resolv.conf.d/resolv.conf.auto" ]; then
+        dns_list=$(awk '/^nameserver/{print $2}' "/tmp/resolv.conf.d/resolv.conf.auto")
+    fi
+
+    [ -z "$dns_list" ] && dns_list="119.29.29.29 223.5.5.5"
+
+    for dns in $dns_list; do
+        echo "nameserver $dns" >> "$RESOLV_DAED"
+    done
+
+    mount --bind "$RESOLV_DAED" /tmp/resolv.conf
+    mount -o remount,ro,bind /tmp/resolv.conf
+}
+
+restore_resolv_conf() {
+  grep -q ' /tmp/resolv\.conf ' /proc/mounts || return 0
+  mount -o remount,rw,bind /tmp/resolv.conf 2>/dev/null
+  umount /tmp/resolv.conf 2>/dev/null
+  rm -f "$RESOLV_DAED"
+}
+
+start_service() {
+  # Inject the geodata location into the dae init script (idempotent).
+  [ -f "/etc/init.d/dae" ] && grep -q "DAE_LOCATION_ASSET" "/etc/init.d/dae" || \
+    sed -i '/procd_set_param command/i\  procd_set_param env DAE_LOCATION_ASSET="/usr/share/v2ray"' "/etc/init.d/dae"
+  config_load "$CONF"
+
+  local enabled
+  config_get_bool enabled "config" "enabled" "0"
+  if [ "$enabled" -eq 0 ]; then
+    restore_resolv_conf
+    return 1
+  fi
+  hijack_resolv_conf
+}
+
+stop_service() {
+  restore_resolv_conf
+}
+
+service_triggers() {
+  procd_add_reload_trigger "$CONF"
+}

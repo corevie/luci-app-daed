@@ -1,0 +1,47 @@
+<%#
+	SPDX-License-Identifier: AGPL-3.0-only
+	Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
+
+	ECH tunnel status: shows the runfile state and whether the local proxy
+	port is actually listening (polled via the ech_status RPC).
+-%>
+<script type="text/javascript">//<![CDATA[
+	XHR.poll(5, '<%=url([[admin]], [[services]], [[daed]], [[ech_status]])%>', null,
+		function(x, data) {
+			var tb = document.getElementById('ech_status');
+			if (data && tb)
+			{
+				var html = '';
+				if (data.enabled) {
+					html += '<em><b style="color:green"><%:ECH Tunnel%>: <%:ENABLED%></b></em><br />';
+					html += '<%:Local proxy%>: <b>' + data.listen + '</b> — ';
+					if (data.listening) {
+						html += '<b style="color:green"><%:LISTENING%></b>';
+					} else {
+						html += '<b style="color:red"><%:NOT LISTENING%></b>';
+					}
+					html += '<br /><%:Runfile%>: <b>' + data.config_file + '</b> — ';
+					if (data.generated) {
+						html += '<b style="color:green"><%:GENERATED%></b>';
+					} else {
+						html += '<b style="color:red"><%:MISSING%></b>';
+					}
+					if (data.daed_running) {
+						html += '<br /><%:Daemon%>: <%:RUNNING%>';
+					} else {
+						html += '<br /><%:Daemon%>: <b style="color:red"><%:NOT RUNNING%></b>';
+					}
+				} else {
+					html = '<em><b style="color:#808080"><%:ECH Tunnel%>: <%:DISABLED%></b></em>';
+				}
+				tb.innerHTML = html;
+			}
+		}
+	);
+//]]></script>
+<style>.mar-10 {margin-left: 50px; margin-right: 10px;}</style>
+<fieldset class="cbi-section">
+	<p id="ech_status">
+		<em><%:Collecting data...%></em>
+	</p>
+</fieldset>
