@@ -1,0 +1,225 @@
+diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/cmd/run.go b/cmd/run.go
+--- a/cmd/run.go	2026-09-16 11:19:32.841829938 +0000
++++ b/cmd/run.go	2026-09-16 11:19:32.849499064 +0000
+@@ -82,6 +82,9 @@
+ 				logrus.Fatalln("Failed to init db:", err)
+ 			}
+ 
++			// Import node drop-ins written by the LuCI "ECH Tunnel" page
++			// before scheduling the subscription update jobs.
++			subscription.SyncLocalSubscriptions(context.TODO())
+ 			subscription.UpdateAll(context.TODO())
+ 
+ 			// Run dae.
+diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/graphql/service/subscription/local.go b/graphql/service/subscription/local.go
+--- a/graphql/service/subscription/local.go	1970-01-01 00:00:00.000000000 +0000
++++ b/graphql/service/subscription/local.go	2026-09-16 11:19:32.853923223 +0000
+@@ -0,0 +1,141 @@
++/*
++ * SPDX-License-Identifier: AGPL-3.0-only
++ * Copyright (c) 2023, daeuniverse Organization <team@v2raya.org>
++ */
++
++package subscription
++
++import (
++	"context"
++	"errors"
++	"os"
++	"path/filepath"
++	"strings"
++	"time"
++
++	daesub "github.com/corevie/dae/common/subscription"
++	"github.com/daeuniverse/dae-wing/common"
++	"github.com/daeuniverse/dae-wing/db"
++	"github.com/sirupsen/logrus"
++	"gorm.io/gorm"
++	"gorm.io/gorm/clause"
++)
++
++// LocalNodesDir is scanned at startup for drop-in node sources.
++// Each file becomes a subscription tagged after its file name and is kept
++// in sync with the file content:
++//
++//	/etc/daed/nodes.d/<tag>.json  cfMac nodes.json (resolved to echws:// links)
++//	/etc/daed/nodes.d/<tag>.txt   plain link list (one node link per line)
++//
++// The LuCI "ECH Tunnel" page (Gist sync) writes these files, so nodes
++// downloaded from a gist show up in the dashboard without manual pasting.
++const LocalNodesDir = "/etc/daed/nodes.d"
++
++// SyncLocalSubscriptions imports every drop-in under LocalNodesDir as a
++// subscription and binds it to a group of the same name, so its nodes are
++// visible in the dashboard and can be referenced by routing rules.
++//
++// It is idempotent: an existing subscription with the same tag and link is
++// refreshed in place, and the group binding is created with DO NOTHING. A
++// tag already owned by another link (a user-managed subscription) is left
++// untouched instead of being hijacked.
++func SyncLocalSubscriptions(ctx context.Context) {
++	entries, err := os.ReadDir(LocalNodesDir)
++	if err != nil {
++		// The directory missing simply means the feature is unused.
++		return
++	}
++	for _, entry := range entries {
++		if entry.IsDir() {
++			continue
++		}
++		name := entry.Name()
++		ext := filepath.Ext(name)
++		if ext != ".json" && ext != ".txt" {
++			continue
++		}
++		tag := strings.TrimSuffix(name, ext)
++		if err := common.ValidateTag(tag); err != nil {
++			logrus.Warnf("[local-nodes] skip %v: %v", name, err)
++			continue
++		}
++		link := "file://" + filepath.Join(LocalNodesDir, name)
++
++		var m db.Subscription
++		err := db.DB(ctx).Where("tag = ?", tag).First(&m).Error
++		switch {
++		case errors.Is(err, gorm.ErrRecordNotFound):
++			m = db.Subscription{
++				UpdatedAt: time.Now(),
++				Tag:       &tag,
++				Link:      link,
++				Status:    "",
++				Info:      "",
++			}
++			if err = db.DB(ctx).Create(&m).Error; err != nil {
++				logrus.Warnf("[local-nodes] create subscription %v: %v", tag, err)
++				continue
++			}
++			logrus.Infof("[local-nodes] created subscription %v from %v", tag, link)
++		case err != nil:
++			logrus.Warnf("[local-nodes] lookup subscription %v: %v", tag, err)
++			continue
++		case m.Link != link:
++			logrus.Warnf("[local-nodes] tag %v is already used by subscription %v; skip", tag, m.Link)
++			continue
++		}
++
++		if _, err := UpdateById(ctx, m.ID); err != nil {
++			logrus.Warnf("[local-nodes] import nodes of %v: %v", tag, err)
++		}
++		ensureLocalGroup(ctx, tag, m.ID)
++	}
++}
++
++// ensureLocalGroup makes sure a group named after the subscription exists
++// and is bound to it. New groups use the min_moving_avg policy; an existing
++// group keeps its own settings and is only bound.
++func ensureLocalGroup(ctx context.Context, name string, subscriptionID uint) {
++	var g db.Group
++	err := db.DB(ctx).Where(&db.Group{Name: name}).First(&g).Error
++	if errors.Is(err, gorm.ErrRecordNotFound) {
++		g = db.Group{Name: name, Policy: "min_moving_avg"}
++		if err = db.DB(ctx).Create(&g).Error; err != nil {
++			logrus.Warnf("[local-nodes] create group %v: %v", name, err)
++			return
++		}
++		logrus.Infof("[local-nodes] created group %v for subscription %v", name, name)
++	} else if err != nil {
++		logrus.Warnf("[local-nodes] lookup group %v: %v", name, err)
++		return
++	}
++	binding := db.GroupSubscription{GroupID: g.ID, SubscriptionID: subscriptionID}
++	if err := db.DB(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&binding).Error; err != nil {
++		logrus.Warnf("[local-nodes] bind group %v to subscription %v: %v", name, subscriptionID, err)
++	}
++}
++
++// resolveSubscriptionContent converts a subscription payload into node
++// links. The cfMac nodes.json format is recognized first, then SIP008, then
++// plain base64 / plaintext link lists (the same order as dae's own
++// subscription resolver).
++func resolveSubscriptionContent(b []byte) (links []string, err error) {
++	noLogger := logrus.New()
++	noLogger.SetOutput(nil)
++
++	if daesub.LooksLikeCfMacNodes(b) {
++		if links, err = daesub.ResolveSubscriptionAsCfMacNodes(b); err == nil && len(links) > 0 {
++			return links, nil
++		}
++		logrus.Debugf("[subscription] cfMac nodes.json resolution failed: %v", err)
++	}
++	if links, err = daesub.ResolveSubscriptionAsSIP008(noLogger, b); err == nil && len(links) > 0 {
++		return links, nil
++	}
++	links = daesub.ResolveSubscriptionAsBase64(noLogger, b)
++	if len(links) == 0 {
++		return nil, errors.New("fetched but no any node was found")
++	}
++	return links, nil
++}
+diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/graphql/service/subscription/mutation_utils.go b/graphql/service/subscription/mutation_utils.go
+--- a/graphql/service/subscription/mutation_utils.go	2026-09-16 11:19:32.846177210 +0000
++++ b/graphql/service/subscription/mutation_utils.go	2026-09-16 11:19:32.853977251 +0000
+@@ -11,6 +11,8 @@
+ 	"fmt"
+ 	"io"
+ 	"net/http"
++	"os"
++	"strings"
+ 	"sync"
+ 	"time"
+ 
+@@ -19,7 +21,6 @@
+ 	"github.com/daeuniverse/dae-wing/db"
+ 	"github.com/daeuniverse/dae-wing/graphql/internal"
+ 	"github.com/daeuniverse/dae-wing/graphql/service/node"
+-	"github.com/corevie/dae/common/subscription"
+ 	"github.com/go-co-op/gocron"
+ 	"github.com/graph-gophers/graphql-go"
+ 	"github.com/sirupsen/logrus"
+@@ -35,6 +36,11 @@
+ 
+ func fetchLinks(subscriptionLink string) (links []string, err error) {
+ 	timeout := 10 * time.Second
++	// Local files (drop-in node sources) cannot benefit from the dae routing
++	// retry; read them directly and report errors verbatim.
++	if strings.HasPrefix(subscriptionLink, "file://") {
++		return _fetchLinks(subscriptionLink, http.DefaultTransport, timeout)
++	}
+ 	// Try with direct by default.
+ 	links, err = _fetchLinks(subscriptionLink, http.DefaultTransport, timeout/2)
+ 	if err != nil {
+@@ -54,6 +60,14 @@
+ 
+ func _fetchLinks(subscriptionLink string, transport http.RoundTripper, timeout time.Duration) (links []string, err error) {
+ 	/// Resolve subscription to node links.
++	/// Local files (written by the LuCI ECH tunnel page) bypass the network.
++	if path, ok := strings.CutPrefix(subscriptionLink, "file://"); ok {
++		b, readErr := os.ReadFile(path)
++		if readErr != nil {
++			return nil, readErr
++		}
++		return resolveSubscriptionContent(b)
++	}
+ 	// Fetch subscription link.
+ 	var (
+ 		b    []byte
+@@ -81,17 +95,8 @@
+ 		return nil, err
+ 	}
+ 
+-	// Resolve node links.
+-	noLogger := logrus.New()
+-	noLogger.SetOutput(io.Discard)
+-	links, err = subscription.ResolveSubscriptionAsSIP008(noLogger, b)
+-	if err != nil {
+-		links = subscription.ResolveSubscriptionAsBase64(noLogger, b)
+-	}
+-	if len(links) == 0 {
+-		return nil, fmt.Errorf("fetched but no any node was found")
+-	}
+-	return links, nil
++	// Resolve node links (cfMac nodes.json, SIP008 or a plain link list).
++	return resolveSubscriptionContent(b)
+ }
+ 
+ func Import(c *gorm.DB, rollbackError bool, argument *internal.ImportArgument) (r *ImportResult, err error) {

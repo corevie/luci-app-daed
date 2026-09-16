@@ -231,6 +231,10 @@ o.description = translate(
 	"Use gist-file:// so the last successful fetch is stored under /etc/dae/persist.d/ " ..
 	"as an offline fallback.")
 
+-- The button renders its own template (button + result area + hint).
+o = gs:option(DummyValue, "download")
+o.template = "daed/ech_download"
+
 -- build_gist_url renders the gist:// subscription URL from UCI values.
 local function build_gist_url(cfg)
 	local auth = ""

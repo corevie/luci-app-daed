@@ -151,6 +151,32 @@ subscription {
 5. 基础设置页开启**订阅自动更新**后，cron 会定时 `hot_reload` 重新拉取
    Gist（dae 热重载，不断连接）。
 
+### 一键下载节点（Download & Update Nodes）
+
+Gist Sync 区新增 **下载** 按钮，点击后：
+
+1. 用表单里的 Gist ID / 令牌 / 文件名即时拉取 gist（`api.github.com`，私有
+   Gist 带 `Authorization: Bearer`；大文件回退 `raw_url`）；
+2. 校验内容确实是 cfMac nodes.json（统计节点数并回显前 5 个名称）；
+3. **覆盖**写入运行文件 `/etc/daed/nodes.d/&lt;订阅标签&gt;.json`（权限 600）；
+4. 重启 daed —— 守护进程启动时扫描该目录（dae-wing 已打补丁支持）：
+
+   - 每个 `<tag>.json` / `<tag>.txt` 变成一个**订阅**（标签 = 文件名）；
+   - 内容按 cfMac nodes.json 解析（`.txt` 则按链接列表解析），每个条目转成
+     一个 `echws://` 节点，**节点名取自 nodes.json 的 `name` 字段**；
+   - 同名**分组**自动创建（`min_moving_avg` 策略）并绑定该订阅；
+   - 之后在 daed 面板的 **订阅 / 节点 / 分组** 列表里即可看到这些节点，
+     在路由配置里引用该分组（如 `fallback: ech_nodes`）即可供服务使用。
+
+已验证链路（真实 `cfMac/nodes.json`，246 个节点）：
+
+```
+nodes.json → 246 条 echws:// 链接 → db.Node{name="台湾-联通-0a49wo45@qabq.com"} ✓ NAME-MATCH 5/5
+```
+
+按钮会即时反馈结果（成功：节点数与名称预览；失败：具体原因，如令牌错误、
+文件不存在、无节点）。下拉/新增节点无需手工粘贴链接。
+
 **字段映射**（cfMac 节点 → echws:// 出站）：
 
 | nodes.json | echws:// | 说明 |

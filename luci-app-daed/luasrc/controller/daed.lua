@@ -1,12 +1,19 @@
 local sys  = require "luci.sys"
 local http = require "luci.http"
 local fs   = require "nixio.fs"
+local jsonc = require "luci.jsonc"
+local i18n = require "luci.i18n"
 
 module("luci.controller.daed", package.seeall)
 
 -- Editable config files (whitelist).
 local CONFIG_DIR = "/etc/daed"
 local CONFIG_ENTRY = "/etc/daed/ech_tunnel.dae"
+
+-- Drop-in directory scanned by daed at startup: every <tag>.json /
+-- <tag>.txt file becomes a subscription named after its file name, and a
+-- group with the same name is bound to it.
+local NODES_DROPIN_DIR = "/etc/daed/nodes.d"
 
 function index()
 	if not nixio.fs.access("/etc/config/daed") then
@@ -20,6 +27,7 @@ function index()
 	entry({"admin", "services", "daed", "ech"}, cbi("daed/ech"), _("ECH Tunnel"), 4).leaf = true
 	entry({"admin", "services", "daed", "editor"}, call("action_editor"), _("Config Files"), 5).leaf = true
 	entry({"admin", "services", "daed", "editor_save"}, post("action_editor_save")).leaf = true
+	entry({"admin", "services", "daed", "ech_download"}, post("action_ech_download")).leaf = true
 	entry({"admin", "services", "daed_status"}, call("act_status"))
 	entry({"admin", "services", "daed", "get_log"}, call("get_log")).leaf = true
 	entry({"admin", "services", "daed", "clear_log"}, call("clear_log")).leaf = true
@@ -78,6 +86,189 @@ function act_ech_status()
 
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(e)
+end
+
+-- ── ECH tunnel: gist node download ──────────────────────────────────────
+-- Downloads nodes.json from the configured GitHub gist, converts nothing
+-- locally: the raw payload is written to the daed drop-in directory where
+-- the daemon's subscription importer resolves it (cfMac nodes.json -> one
+-- echws:// node per entry, named after the "name" field).
+
+local function shell_quote(s)
+	return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
+
+-- http_download fetches url into dest, optionally with a bearer token.
+-- It tries wget first and falls back to uclient-fetch; both ship with
+-- OpenWrt. Returns true when a non-empty file was written.
+local function http_download(url, dest, token)
+	local attempts = {}
+	local headers = {}
+	if token and token ~= "" then
+		headers[#headers+1] = "Authorization: Bearer " .. token
+	end
+	for _, tool in ipairs({ "wget", "uclient-fetch" }) do
+		local cmd = tool .. " -q -T 20"
+		for _, h in ipairs(headers) do
+			cmd = cmd .. " --header=" .. shell_quote(h)
+		end
+		cmd = cmd .. " -O " .. shell_quote(dest) .. " " .. shell_quote(url)
+		attempts[#attempts+1] = cmd
+	end
+	for _, cmd in ipairs(attempts) do
+		if sys.call(cmd) == 0 then
+			local f = io.open(dest, "r")
+			if f then
+				local size = f:seek("end")
+				f:close()
+				if size and size > 0 then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+local function read_file(path)
+	local f = io.open(path, "r")
+	if not f then
+		return nil
+	end
+	local body = f:read("*a")
+	f:close()
+	return body
+end
+
+-- gist_fetch downloads the requested file payload from a GitHub gist.
+-- The GitHub API is used so that private gists (token) work; when the file
+-- content is omitted (large file), its raw_url is fetched instead.
+-- Returns content, filename or nil, error.
+local function gist_fetch(gist_id, token, wanted, tmpdir)
+	local api_file = tmpdir .. "/gist.json"
+	if not http_download("https://api.github.com/gists/" .. gist_id, api_file, token) then
+		return nil, i18n.translate("Cannot reach the GitHub API (check the network, Gist ID and token)")
+	end
+	local body = read_file(api_file)
+	local obj = body and jsonc.parse(body)
+	if type(obj) ~= "table" or type(obj.files) ~= "table" then
+		return nil, i18n.translate("Unexpected GitHub API response (check the Gist ID and token)")
+	end
+
+	local filename, entry
+	if wanted ~= "" and obj.files[wanted] then
+		filename, entry = wanted, obj.files[wanted]
+	else
+		-- Fall back to nodes.json, then any *.json file.
+		for name, candidate in pairs(obj.files) do
+			if name == "nodes.json" then
+				filename, entry = name, candidate
+				break
+			elseif name:match("%.json$") and not entry then
+				filename, entry = name, candidate
+			end
+		end
+	end
+	if not entry then
+		return nil, i18n.translatef("Gist has no such file: %s", wanted ~= "" and wanted or "*.json")
+	end
+
+	if type(entry.content) == "string" and entry.content ~= "" then
+		return entry.content, filename
+	end
+	if type(entry.raw_url) == "string" and entry.raw_url ~= "" then
+		local raw_file = tmpdir .. "/raw.json"
+		if not http_download(entry.raw_url, raw_file, token) then
+			return nil, i18n.translate("Failed to download the gist raw file")
+		end
+		local content = read_file(raw_file)
+		if not content or content == "" then
+			return nil, i18n.translate("The gist raw file is empty")
+		end
+		return content, filename
+	end
+	return nil, i18n.translate("The gist file has neither content nor a raw_url")
+end
+
+function action_ech_download()
+	http.prepare_content("application/json")
+
+	local function fail(msg)
+		http.write_json({ ok = false, error = msg })
+	end
+
+	local gist_id = (http.formvalue("gist_id") or ""):gsub("%s", "")
+	local token = (http.formvalue("token") or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	local wanted = (http.formvalue("gist_file") or ""):gsub("%s", "")
+	local tag = (http.formvalue("sub_tag") or ""):gsub("%s", "")
+	if wanted == "" then
+		wanted = "nodes.json"
+	end
+	if tag == "" then
+		tag = "ech_nodes"
+	end
+	if not gist_id:match("^[%w%-]+$") then
+		return fail(i18n.translate("Invalid Gist ID"))
+	end
+	if not tag:match("^[%w_%-%.]+$") then
+		return fail(i18n.translate("Invalid subscription tag"))
+	end
+
+	local tmpdir = "/tmp/daed-ech-" .. tostring(os.time())
+	sys.call("rm -rf " .. shell_quote(tmpdir) .. " && mkdir -p " .. shell_quote(tmpdir))
+
+	local content, filename = gist_fetch(gist_id, token, wanted, tmpdir)
+	sys.call("rm -rf " .. shell_quote(tmpdir))
+	if not content then
+		return fail(filename)
+	end
+
+	-- Collect the node names for feedback and make sure it looks like a
+	-- cfMac node library before it replaces the drop-in.
+	local parsed = jsonc.parse(content)
+	local names, count = {}, 0
+	if type(parsed) == "table" and type(parsed.nodes) == "table" then
+		count = #parsed.nodes
+		for i, node in ipairs(parsed.nodes) do
+			if i > 5 then
+				break
+			end
+			if type(node) == "table" and type(node.name) == "string" then
+				names[#names+1] = node.name
+			end
+		end
+	end
+	if count == 0 then
+		return fail(i18n.translatef("Gist file %s contains no nodes", filename or wanted))
+	end
+
+	sys.call("mkdir -p " .. shell_quote(NODES_DROPIN_DIR))
+	local dest = NODES_DROPIN_DIR .. "/" .. tag .. ".json"
+	local f = io.open(dest, "w")
+	if not f then
+		return fail(i18n.translatef("Cannot write %s", dest))
+	end
+	f:write(content)
+	f:close()
+	sys.call("chmod 600 " .. shell_quote(dest))
+	sys.call("logger -t luci-app-daed " .. shell_quote(
+		string.format("ECH gist download: %d nodes from %s -> %s", count, filename or wanted, dest)))
+
+	local note = ""
+	if sys.call("pidof daed >/dev/null") == 0 then
+		sys.call("/etc/init.d/daed restart >/dev/null 2>&1 &")
+		note = i18n.translate("daed is restarting; the nodes will appear in the dashboard shortly")
+	else
+		note = i18n.translate("daed is not running; the nodes will be imported on next start")
+	end
+
+	http.write_json({
+		ok = true,
+		count = count,
+		names = names,
+		file = dest,
+		note = note,
+	})
 end
 
 -- ── Config file editor ──────────────────────────────────────────────────

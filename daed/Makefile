@@ -159,6 +159,7 @@ define Build/Prepare
 		pushd $(PKG_BUILD_DIR) ; \
 			$(call RetargetWingAtCore) ; \
 			patch --forward -p1 < $(CURDIR)/../patchset/build_fixes.patch || true ; \
+			patch --forward -p1 < $(CURDIR)/../patchset/feat-local-nodes-import.patch || true ; \
 			$(call MergeCoreSums) ; \
 		popd ; \
 		mkdir -p $(DAED_BUILD_DIR)/.node_tmp/config ; \

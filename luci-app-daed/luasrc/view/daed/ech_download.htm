@@ -1,0 +1,62 @@
+<%#
+	SPDX-License-Identifier: AGPL-3.0-only
+	Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
+
+	"Download & Update Nodes" button of the Gist sync section.
+	Posts the current form values to the ech_download endpoint, which fetches
+	the gist payload and drops it into /etc/daed/nodes.d; the daemon imports
+	the nodes (named after nodes.json's "name" field) and exposes them in the
+	dashboard's subscription/node lists.
+-%>
+<div class="cbi-value">
+	<label class="cbi-value-title"><%:Download &amp; Update Nodes%></label>
+	<div class="cbi-value-field">
+		<input type="button" class="cbi-button cbi-button-apply"
+			value="<%:Download%>" onclick="ech_download_nodes(this)" />
+		<span id="ech_download_result" style="margin-left:10px"></span>
+		<div class="cbi-value-description">
+			<%:Fetch the gist now, overwrite /etc/daed/nodes.d/<tag>.json and restart daed. Each entry becomes an echws:// node named after the "name" field, and the nodes appear in the dashboard's subscriptions and group list.%>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">//<![CDATA[
+	function ech_field_value(suffix) {
+		var el = document.querySelector('[name$=".' + suffix + '"]');
+		return el ? el.value : '';
+	}
+
+	function ech_download_nodes(btn) {
+		var out = document.getElementById('ech_download_result');
+		btn.disabled = true;
+		out.style.color = '';
+		out.textContent = '<%:Downloading...%>';
+
+		var fd = new FormData();
+		fd.append('gist_id', ech_field_value('gist_id'));
+		fd.append('token', ech_field_value('token'));
+		fd.append('gist_file', ech_field_value('gist_file'));
+		fd.append('sub_tag', ech_field_value('sub_tag'));
+
+		fetch('<%=url([[admin]], [[services]], [[daed]], [[ech_download]])%>', {
+			method: 'POST',
+			body: fd,
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		}).then(function (r) { return r.json(); }).then(function (data) {
+			if (data && data.ok) {
+				var names = (data.names || []).join(', ');
+				out.style.color = 'green';
+				out.textContent = '<%:Downloaded%> ' + data.count + ' <%:nodes%>'
+					+ (names ? ' (' + names + (data.count > names.split(', ').length ? ' ...' : '') + ')' : '')
+					+ ' -> ' + data.file + '. ' + (data.note || '');
+			} else {
+				out.style.color = 'red';
+				out.textContent = '<%:Download failed%>: ' + ((data && data.error) || '<%:unknown error%>');
+			}
+		}).catch(function (e) {
+			out.style.color = 'red';
+			out.textContent = '<%:Download failed%>: ' + e;
+		}).then(function () {
+			btn.disabled = false;
+		});
+	}
+//]]></script>

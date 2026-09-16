@@ -255,3 +255,59 @@ msgstr "使用 gist-file://，最近一次成功拉取的内容会存到 /etc/da
 
 msgid "Path of the generated dae config fragment. The default lives in the runfiles directory of the standalone dae build (/etc/dae/config.d/, merged by the include directive in config.dae)."
 msgstr "生成的 dae 配置片段路径。默认位于独立版 dae 的运行文件目录（/etc/dae/config.d/，由 config.dae 的 include 指令合并）。"
+msgid "Download & Update Nodes"
+msgstr "下载并更新节点"
+
+msgid "Download"
+msgstr "下载"
+
+msgid "Downloading..."
+msgstr "下载中..."
+
+msgid "Downloaded"
+msgstr "已下载"
+
+msgid "nodes"
+msgstr "个节点"
+
+msgid "Download failed"
+msgstr "下载失败"
+
+msgid "unknown error"
+msgstr "未知错误"
+
+msgid "Fetch the gist now, overwrite /etc/daed/nodes.d/<tag>.json and restart daed. Each entry becomes an echws:// node named after the \"name\" field, and the nodes appear in the dashboard's subscriptions and group list."
+msgstr "立即拉取 Gist，覆盖 /etc/daed/nodes.d/<标签>.json 并重启 daed。每个节点按 nodes.json 的 \"name\" 字段命名并转为 echws:// 节点，随后会出现在仪表盘的订阅与分组列表中。"
+
+msgid "Invalid subscription tag"
+msgstr "无效的订阅标签"
+
+msgid "Cannot reach the GitHub API (check the network, Gist ID and token)"
+msgstr "无法访问 GitHub API（请检查网络、Gist ID 与令牌）"
+
+msgid "Unexpected GitHub API response (check the Gist ID and token)"
+msgstr "GitHub API 响应异常（请检查 Gist ID 与令牌）"
+
+msgid "Gist has no such file: %s"
+msgstr "Gist 中不存在该文件：%s"
+
+msgid "Failed to download the gist raw file"
+msgstr "下载 gist 原始文件失败"
+
+msgid "The gist raw file is empty"
+msgstr "gist 原始文件为空"
+
+msgid "The gist file has neither content nor a raw_url"
+msgstr "gist 文件既无内容也无 raw_url"
+
+msgid "Gist file %s contains no nodes"
+msgstr "Gist 文件 %s 中没有任何节点"
+
+msgid "Cannot write %s"
+msgstr "无法写入 %s"
+
+msgid "daed is restarting; the nodes will appear in the dashboard shortly"
+msgstr "daed 正在重启，稍后即可在仪表盘中看到这些节点"
+
+msgid "daed is not running; the nodes will be imported on next start"
+msgstr "daed 未运行，节点将在下次启动时导入"
