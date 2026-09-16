@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 )
 
 func TestWriteReloadSendAndSignalRestoresProgressOnSignalFailure(t *testing.T) {

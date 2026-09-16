@@ -5,7 +5,7 @@
 
 package dialer
 
-import "github.com/daeuniverse/dae/common/consts"
+import "github.com/corevie/dae/common/consts"
 
 type HealthDomain uint8
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 	D "github.com/daeuniverse/outbound/dialer"
 	"github.com/daeuniverse/outbound/protocol/direct"
 	"github.com/sirupsen/logrus"

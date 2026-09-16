@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	daerrors "github.com/daeuniverse/dae/common/errors"
-	ob "github.com/daeuniverse/dae/component/outbound"
-	componentdialer "github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/common/consts"
+	daerrors "github.com/corevie/dae/common/errors"
+	ob "github.com/corevie/dae/component/outbound"
+	componentdialer "github.com/corevie/dae/component/outbound/dialer"
 	"github.com/sirupsen/logrus"
 )
 

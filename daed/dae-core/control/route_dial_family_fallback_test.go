@@ -11,8 +11,8 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/daeuniverse/dae/common/consts"
-	daerrors "github.com/daeuniverse/dae/common/errors"
+	"github.com/corevie/dae/common/consts"
+	daerrors "github.com/corevie/dae/common/errors"
 )
 
 func TestRouteDial_RetriesAlternateFamilyAfterLocalNetworkFailure(t *testing.T) {

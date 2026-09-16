@@ -8,8 +8,8 @@ package control
 import (
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/component/outbound/dialer"
 )
 
 // NodeLatencySnapshot describes the latest observable latency status for one node link.

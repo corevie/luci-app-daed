@@ -9,8 +9,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/component/sniffing"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/component/sniffing"
 )
 
 // UdpFlowKey identifies a UDP flow at ingress.

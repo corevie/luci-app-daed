@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/cilium/ebpf"
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"

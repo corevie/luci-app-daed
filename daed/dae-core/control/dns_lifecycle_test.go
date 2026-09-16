@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/daeuniverse/dae/component/dns"
+	"github.com/corevie/dae/component/dns"
 	dnsmessage "github.com/miekg/dns"
 	"github.com/olicesx/quic-go"
 	"github.com/olicesx/quic-go/congestion"

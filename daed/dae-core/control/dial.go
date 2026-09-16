@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"net/netip"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/common/consts"
-	commonerrors "github.com/daeuniverse/dae/common/errors"
-	ob "github.com/daeuniverse/dae/component/outbound"
-	"github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/common/consts"
+	commonerrors "github.com/corevie/dae/common/errors"
+	ob "github.com/corevie/dae/component/outbound"
+	"github.com/corevie/dae/component/outbound/dialer"
 	"github.com/daeuniverse/outbound/netproxy"
 )
 

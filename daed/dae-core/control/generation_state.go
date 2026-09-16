@@ -8,8 +8,8 @@ package control
 import (
 	"net/netip"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/component/outbound"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/component/outbound"
 )
 
 type controlPlaneGenerationState struct {

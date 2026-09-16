@@ -8,7 +8,7 @@ package control
 import (
 	"testing"
 
-	componentdialer "github.com/daeuniverse/dae/component/outbound/dialer"
+	componentdialer "github.com/corevie/dae/component/outbound/dialer"
 )
 
 func TestNewDnsLifecycleProfile_ProxyBackedUsesShortIdleAndTimeoutDiscard(t *testing.T) {

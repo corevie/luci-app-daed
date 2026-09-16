@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/pkg/trie"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/pkg/trie"
 	"github.com/sirupsen/logrus"
 	"github.com/v2rayA/ahocorasick-domain"
 )
@@ -102,7 +102,7 @@ func (n *AhocorasickSlimtrie) MatchDomainBitmap(domain string) (bitmap []uint32)
 	bitmap = make([]uint32, N)
 	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
 	// Domain should consist of 'a'-'z' and '.' and '-'
-	// NOTE: DO NOT VERIFY THE DOMAIN TO MATCH: https://github.com/daeuniverse/dae/issues/528
+	// NOTE: DO NOT VERIFY THE DOMAIN TO MATCH: https://github.com/corevie/dae/issues/528
 	// for _, b := range []byte(domain) {
 	// 	if !ahocorasick.IsValidChar(b) {
 	// 		return bitmap

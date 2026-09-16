@@ -16,9 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/daeuniverse/dae/config"
-	"github.com/daeuniverse/dae/control"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/config"
+	"github.com/corevie/dae/control"
+	"github.com/corevie/dae/pkg/config_parser"
 	"github.com/sirupsen/logrus"
 )
 

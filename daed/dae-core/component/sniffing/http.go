@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"unicode"
 
-	"github.com/daeuniverse/dae/common"
+	"github.com/corevie/dae/common"
 )
 
 var (

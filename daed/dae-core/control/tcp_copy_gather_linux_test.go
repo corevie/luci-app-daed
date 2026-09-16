@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/component/sniffing"
+	"github.com/corevie/dae/component/sniffing"
 	"github.com/daeuniverse/outbound/netproxy"
 	bufferredconn "github.com/daeuniverse/outbound/pkg/bufferred_conn"
 )

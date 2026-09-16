@@ -9,9 +9,9 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/config"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/config"
+	"github.com/corevie/dae/pkg/config_parser"
 	"github.com/daeuniverse/outbound/netproxy"
 	"github.com/sirupsen/logrus"
 )

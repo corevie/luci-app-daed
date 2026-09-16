@@ -5,7 +5,7 @@
 
 package routing
 
-import "github.com/daeuniverse/dae/common/consts"
+import "github.com/corevie/dae/common/consts"
 
 type DomainMatcher interface {
 	AddSet(bitIndex int, patterns []string, typ consts.RoutingDomainKey)

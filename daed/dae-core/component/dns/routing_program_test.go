@@ -8,7 +8,7 @@ package dns
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 func TestNewNormalizedRequestRoutingProgramSplitsInternalSelectors(t *testing.T) {

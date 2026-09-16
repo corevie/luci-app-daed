@@ -12,7 +12,7 @@ local m, s, o
 local sys = require "luci.sys"
 
 -- Where the generated dae fragment is written (UCI option config_file).
-local DEFAULT_RUNFILE = "/etc/dae/config.d/ech_tunnel.dae"
+local DEFAULT_RUNFILE = "/etc/daed/ech_tunnel.dae"
 
 m = Map("daed")
 m.title = translate("ECH Tunnel")
@@ -248,7 +248,7 @@ local function build_gist_url(cfg)
 	return scheme .. "://" .. auth .. cfg.gist_id .. file
 end
 
-local GIST_RUNFILE = "/etc/dae/config.d/ech_sub.dae"
+local GIST_RUNFILE = "/etc/daed/ech_sub.dae"
 
 local function write_gist_runfile(cfg)
 	local lines = {}

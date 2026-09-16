@@ -7,8 +7,8 @@ package domain_matcher
 
 import (
 	"fmt"
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/component/routing"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/component/routing"
 	"regexp"
 	"strings"
 )

@@ -6,9 +6,9 @@
 package dns
 
 import (
-	"github.com/daeuniverse/dae/component/routing"
-	"github.com/daeuniverse/dae/config"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/component/routing"
+	"github.com/corevie/dae/config"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 // NormalizedRequestRoutingProgram is the DNS request routing IR after

@@ -272,7 +272,7 @@ uci_store["gist"] = {
 	persist = "1",
 }
 map_obj.on_after_apply(map_obj, nil)
-local gist_content = written_files["/etc/dae/config.d/ech_sub.dae"]
+local gist_content = written_files["/etc/daed/ech_sub.dae"]
 check(gist_content ~= nil, "gist runfile written")
 if gist_content then
 	check(gist_content:find("subscription {", 1, true) ~= nil, "subscription section emitted")

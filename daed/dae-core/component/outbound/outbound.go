@@ -7,7 +7,7 @@ package outbound
 
 import (
 	// Register the ech-workers ECH websocket tunnel node type ("echws://").
-	_ "github.com/daeuniverse/dae/component/outbound/dialer/echws"
+	_ "github.com/corevie/dae/component/outbound/dialer/echws"
 	_ "github.com/daeuniverse/outbound/dialer/anytls"
 	_ "github.com/daeuniverse/outbound/dialer/http"
 	_ "github.com/daeuniverse/outbound/dialer/hysteria2"

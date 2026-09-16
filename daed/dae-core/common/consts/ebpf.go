@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	internal "github.com/daeuniverse/dae/pkg/ebpf_internal"
+	internal "github.com/corevie/dae/pkg/ebpf_internal"
 )
 
 const (

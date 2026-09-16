@@ -8,7 +8,7 @@ package sniffing
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/component/sniffing/internal/quicutils"
+	"github.com/corevie/dae/component/sniffing/internal/quicutils"
 )
 
 func FuzzExtractSniFromTls(f *testing.F) {

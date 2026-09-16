@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/common/netutils"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/common/netutils"
 )
 
 var (

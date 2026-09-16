@@ -10,7 +10,7 @@ package control
 import (
 	"fmt"
 
-	internal "github.com/daeuniverse/dae/pkg/ebpf_internal"
+	internal "github.com/corevie/dae/pkg/ebpf_internal"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )

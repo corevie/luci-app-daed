@@ -8,7 +8,7 @@ package control
 import (
 	"time"
 
-	componentdialer "github.com/daeuniverse/dae/component/outbound/dialer"
+	componentdialer "github.com/corevie/dae/component/outbound/dialer"
 )
 
 type UdpLifecycleKind uint8

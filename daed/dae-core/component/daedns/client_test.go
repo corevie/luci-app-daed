@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/netutils"
-	componentdns "github.com/daeuniverse/dae/component/dns"
+	"github.com/corevie/dae/common/netutils"
+	componentdns "github.com/corevie/dae/component/dns"
 	"github.com/daeuniverse/outbound/netproxy"
 	"github.com/daeuniverse/outbound/protocol/direct"
 	dnsmessage "github.com/miekg/dns"

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/component/outbound/dialer"
 	"github.com/sirupsen/logrus"
 )
 

@@ -12,8 +12,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/daeuniverse/dae/cmd/internal"
-	"github.com/daeuniverse/dae/trace"
+	"github.com/corevie/dae/cmd/internal"
+	"github.com/corevie/dae/trace"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

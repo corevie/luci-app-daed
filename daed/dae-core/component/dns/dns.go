@@ -12,12 +12,12 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/common/assets"
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/common/netutils"
-	"github.com/daeuniverse/dae/component/routing"
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/common/assets"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/common/netutils"
+	"github.com/corevie/dae/component/routing"
+	"github.com/corevie/dae/config"
 	dnsmessage "github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )

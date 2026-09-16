@@ -18,9 +18,9 @@ import (
 
 	"github.com/cilium/ebpf"
 	ciliumLink "github.com/cilium/ebpf/link"
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/component"
-	internal "github.com/daeuniverse/dae/pkg/ebpf_internal"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/component"
+	internal "github.com/corevie/dae/pkg/ebpf_internal"
 	"github.com/mohae/deepcopy"
 	"github.com/safchain/ethtool"
 	"github.com/sirupsen/logrus"
@@ -104,7 +104,7 @@ type controlPlaneCore struct {
 	bpf                atomic.Pointer[bpfObjects]
 	outboundId2Name    map[uint8]string
 	// tcpRelayOffload is permanently disabled due to kernel panic issues.
-	// See: https://github.com/daeuniverse/dae/pull/912
+	// See: https://github.com/corevie/dae/pull/912
 	// Field preserved for ABI compatibility; always remains false.
 
 	kernelVersion *internal.Version
@@ -606,7 +606,7 @@ func (c *controlPlaneCore) setupTCPRelayOffload() error {
 		return nil
 	}
 	// TCP relay eBPF offload is disabled due to kernel panic issues with bpf_msg_redirect_hash().
-	// See: https://github.com/daeuniverse/dae/pull/912
+	// See: https://github.com/corevie/dae/pull/912
 	// The sk_msg program now returns SK_PASS, so we must not enable offload or connections will hang.
 	// The function body below is preserved for potential future re-enabling.
 	c.log.Info("TCP relay eBPF offload is disabled due to kernel panic issues; falling back to userspace relay")

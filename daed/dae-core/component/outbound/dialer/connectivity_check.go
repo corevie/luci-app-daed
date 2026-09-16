@@ -23,9 +23,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/daeuniverse/dae/common/consts"
-	commonerrors "github.com/daeuniverse/dae/common/errors"
-	"github.com/daeuniverse/dae/common/netutils"
+	"github.com/corevie/dae/common/consts"
+	commonerrors "github.com/corevie/dae/common/errors"
+	"github.com/corevie/dae/common/netutils"
 	"github.com/daeuniverse/outbound/netproxy"
 	"github.com/daeuniverse/outbound/pkg/fastrand"
 	"github.com/daeuniverse/outbound/pool"

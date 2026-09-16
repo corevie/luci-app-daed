@@ -9,7 +9,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/daeuniverse/dae/common"
+	"github.com/corevie/dae/common"
 	"github.com/daeuniverse/outbound/netproxy"
 )
 

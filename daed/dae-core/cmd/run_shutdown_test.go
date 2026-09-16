@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/config"
-	"github.com/daeuniverse/dae/control"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/config"
+	"github.com/corevie/dae/control"
 	"github.com/sirupsen/logrus"
 )
 

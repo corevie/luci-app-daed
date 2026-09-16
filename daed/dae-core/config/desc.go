@@ -10,10 +10,10 @@ type Desc map[string]string
 var SectionSummaryDesc = Desc{
 	"subscription": "Subscriptions defined here will be resolved as nodes and merged as a part of the global node pool.\nSupport to give the subscription a tag, and filter nodes from a given subscription in the group section.",
 	"node":         "Nodes defined here will be merged as a part of the global node pool.",
-	"dns":          "See more at https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/dns.md.",
+	"dns":          "See more at https://github.com/corevie/dae/blob/main/docs/en/configuration/dns.md.",
 	"group":        "Node group. Groups defined here can be used as outbounds in section \"routing\".",
 	"ech_tunnel":   "Optional ECH websocket tunnel (ech-workers). When set, dae runs the tunnel client and (if listen is set) a local SOCKS5/HTTP proxy that relays through it.\nThe tunnel can also be used as a node link: 'echws://host:port/path?token=...&ip=...&dns=...&ech=...'.",
-	"routing": `Traffic follows this routing. See https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/routing.md for full examples.
+	"routing": `Traffic follows this routing. See https://github.com/corevie/dae/blob/main/docs/en/configuration/routing.md for full examples.
 Notice: domain traffic split will fail if DNS traffic is not taken over by dae.
 Built-in outbound: direct, must_direct, block.
 Available functions: domain, sip, dip, sport, dport, ipversion, l4proto, pname, mac.
@@ -56,10 +56,10 @@ var GlobalDesc = Desc{
 4. "domain++". Based on domain+ mode but force to re-route traffic using sniffed domain to partially recover domain based traffic split ability. It doesn't work for direct traffic and consumes more CPU resources.`,
 	"disable_waiting_network":      "Disable waiting for network before pulling subscriptions.",
 	"disable_thp":                  "Disable transparent huge pages for the dae process. This reduces RSS inflation for dae userspace memory without changing system-wide THP settings.",
-	"auto_config_kernel_parameter": "Automatically configure Linux kernel parameters like ip_forward and send_redirects. Check out https://github.com/daeuniverse/dae/blob/main/docs/en/user-guide/kernel-parameters.md to see what will dae do.",
+	"auto_config_kernel_parameter": "Automatically configure Linux kernel parameters like ip_forward and send_redirects. Check out https://github.com/corevie/dae/blob/main/docs/en/user-guide/kernel-parameters.md to see what will dae do.",
 	"sniffing_timeout":             "Timeout to waiting for first data sending for sniffing. It is always 0 if dial_mode is ip. Default 30ms is suitable for most networks. Increase to 100-300ms for high-latency networks.",
 	"tls_implementation":           "TLS implementation. \"tls\" is to use Go's crypto/tls. \"utls\" is to use uTLS, which can imitate browser's Client Hello.",
-	"utls_imitate":                 "The Client Hello ID for uTLS to imitate. This takes effect only if tls_implementation is utls. See more: https://github.com/daeuniverse/dae/blob/331fa23c16/component/outbound/transport/tls/utls.go#L17",
+	"utls_imitate":                 "The Client Hello ID for uTLS to imitate. This takes effect only if tls_implementation is utls. See more: https://github.com/corevie/dae/blob/331fa23c16/component/outbound/transport/tls/utls.go#L17",
 	"mptcp":                        "Enable Multipath TCP.  If is true, dae will try to use MPTCP to connect all nodes, but it will only take effects when the node supports MPTCP. It can use for load balance and failover to multiple interfaces and IPs.",
 	"bootstrap_resolver":           "Explicit DNS resolver used only for bootstrap lookups that must happen before dae DNS routing is available, such as resolving named DNS upstream hosts and dial_mode real-domain probes. When unset, dae falls back to 119.29.29.29:53 and 223.5.5.5:53 in order. Setting bootstrap_resolver disables those defaults and uses only the configured resolver.",
 	"bpf_conn_state_map_size":      "Maximum entries for the shared TCP/UDP eBPF connection-state map. Lower values reduce locked kernel memory but also lower the maximum tracked concurrent flows. This takes effect on fresh eBPF load or restart; same-port reload keeps the live map to preserve connections.",

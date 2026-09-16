@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/cilium/ebpf"
-	"github.com/daeuniverse/dae/common"
+	"github.com/corevie/dae/common"
 )
 
 type domainRoutingOwnerSnapshot struct {

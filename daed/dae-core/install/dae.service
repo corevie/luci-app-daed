@@ -1,6 +1,6 @@
 [Unit]
 Description=dae Service
-Documentation=https://github.com/daeuniverse/dae
+Documentation=https://github.com/corevie/dae
 After=network-online.target docker.service systemd-sysctl.service
 Wants=network-online.target
 

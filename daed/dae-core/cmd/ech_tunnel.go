@@ -16,9 +16,9 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/component/echworkers"
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/component/echworkers"
+	"github.com/corevie/dae/config"
 	"github.com/daeuniverse/outbound/netproxy"
 	"github.com/daeuniverse/outbound/protocol/direct"
 	"github.com/sirupsen/logrus"

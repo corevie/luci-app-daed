@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/daeuniverse/dae/common"
+	"github.com/corevie/dae/common"
 )
 
 func BenchmarkNewKeys(b *testing.B) {

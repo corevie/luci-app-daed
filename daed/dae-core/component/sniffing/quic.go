@@ -9,7 +9,7 @@ import (
 	"errors"
 	"io/fs"
 
-	"github.com/daeuniverse/dae/component/sniffing/internal/quicutils"
+	"github.com/corevie/dae/component/sniffing/internal/quicutils"
 	"github.com/daeuniverse/outbound/pool"
 )
 

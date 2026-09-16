@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 	"github.com/sirupsen/logrus"
 )
 

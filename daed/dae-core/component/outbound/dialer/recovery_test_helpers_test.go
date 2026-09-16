@@ -3,7 +3,7 @@ package dialer
 import (
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 )
 
 func (d *Dialer) getRecoveryBackoffDuration(proto consts.L4ProtoStr) time.Duration {

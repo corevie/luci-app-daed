@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/cilium/ebpf"
-	"github.com/daeuniverse/dae/common"
+	"github.com/corevie/dae/common"
 	dnsmessage "github.com/miekg/dns"
 )
 

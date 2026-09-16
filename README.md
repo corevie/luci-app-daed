@@ -1,6 +1,6 @@
 <h1 align="center">luci-app-daed</h1>
 <p align="center">
-  <img width="100" src="https://github.com/daeuniverse/dae/blob/main/logo.png?raw=true" />
+  <img width="100" src="https://github.com/corevie/dae/blob/main/logo.png?raw=true" />
 </p>
 <p align="center">
   <b>一个基于 eBPF 的高性能透明代理解决方案。</b>
@@ -8,25 +8,21 @@
 
 ---
 
-## 构建说明（dae-wing 已移除，构建独立版 dae）
+## 构建说明（dae-wing 已恢复，构建在本地 corevie/dae 内核上）
 
-本仓库的 `daed` 包**不再构建 dae-wing / daed 面板**，直接产出独立版
-`dae` 二进制（runfiles 模式）：
+本仓库的 `daed` 包构建 **dae-wing**（daed 仪表板守护进程，`/usr/bin/daed`），
+其 dae 内核使用本地 vendored 的 corevie/dae 源码（含 ech-workers ECH 隧道、
+cfMac nodes.json 订阅适配与 GitHub Gist 同步）：
 
-- `daed/dae-core/` —— dae-2.0.0（kix fork）完整源码快照（约 3.6MB），已
-  集成 ech-workers ECH 隧道、cfMac nodes.json 订阅适配与 GitHub Gist
-  同步；
-- `daed/dae-kern-headers/` —— eBPF 头文件快照（约 15MB），构建时安装到
-  `kern/headers/`，全程离线（无需 git submodule）；
-- 安装物：`/usr/bin/dae`、`/etc/dae/config.dae`（主配置，include
-  `config.d/*.dae`）、`config.d/{dns,node,route}.dae` 样板、
-  `/etc/config/daed`（UCI）、`/etc/init.d/dae`（procd，支持
-  `hot_reload` 与订阅定时更新 cron）。
+- `daed/dae-core/` —— corevie/dae 完整源码快照；
+- `daed/dae-kern-headers/` —— eBPF 头文件快照（构建时装入 kern/headers）；
+- `patchset/build_fixes.patch` —— 构建时应用到 dae-wing。
 
-构建输入全部本地化：不再 git clone dae-wing/dae-core，不再下载 node/npm
-前端。注意：`daed/Makefile` 第 7-17 行保持原样 ——
-`autoupdate.yml` 按固定行号维护这些变量（删一行插一行保持平衡），其中
-`PKG_SOURCE_*` 现在不再被使用（仅为 CI 兼容保留）。
+构建时对 dae-wing 源码做的适配（已在 dc50308 上验证）：
+1. `github.com/daeuniverse/dae` → `github.com/corevie/dae`（保留
+   dae-config-dist 依赖与 wing 自身 module 路径）；
+2. go.mod 增加 `replace github.com/corevie/dae => ./dae-core`；
+3. 合并 core 的 go.sum 条目（避免 go mod tidy 拉入测试依赖）。
 
 升级本地 dae-core 时，把新版源码同步到 `daed/dae-core/`（排除 `.git`、
 生成的 `bpf_bpf*.go`、`kern/headers/`）后重新编译即可。
@@ -140,7 +136,7 @@ ECH 页面新增 **Gist Sync** 区，把 GitHub Gist 上的 cfMac `nodes.json`
    **文件名**（默认 nodes.json）与**订阅标签**（默认 ech_nodes）；
 2. 勾选 **持久化最近一次拉取** 会使用 `gist-file://`，最近一次成功拉取
    存到 `/etc/dae/persist.d/` 作为离线回退；
-3. 保存后生成 `/etc/dae/config.d/ech_sub.dae`：
+3. 保存后生成 `/etc/daed/ech_sub.dae`：
 
 ```
 subscription {
@@ -148,8 +144,10 @@ subscription {
 }
 ```
 
-4. 在 `config.d/node.dae` 的分组里引用：`filter: subtag(ech_nodes)`，
-   路由规则即可使用这些节点（例如 `fallback: proxy`）；
+4. **仪表板模式**（本包）：把生成的 `echws://` 节点链接或 `gist://`
+   订阅 URL 粘贴到 daed 面板的节点/订阅管理（内核已支持识别）；
+   **独立 runfiles 模式**：在分组里引用 `filter: subtag(ech_nodes)`，路由
+   规则即可使用这些节点（例如 `fallback: proxy`）；
 5. 基础设置页开启**订阅自动更新**后，cron 会定时 `hot_reload` 重新拉取
    Gist（dae 热重载，不断连接）。
 

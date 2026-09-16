@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 	dnsmessage "github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )

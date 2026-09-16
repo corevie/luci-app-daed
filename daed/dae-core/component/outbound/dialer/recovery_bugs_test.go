@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 	D "github.com/daeuniverse/outbound/dialer"
 	_ "github.com/daeuniverse/outbound/dialer/shadowsocks"
 	_ "github.com/daeuniverse/outbound/protocol/shadowsocks"

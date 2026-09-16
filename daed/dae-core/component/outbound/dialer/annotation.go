@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 const (

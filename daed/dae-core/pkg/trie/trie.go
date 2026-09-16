@@ -14,8 +14,8 @@ import (
 	"net/netip"
 	"sort"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/common/bitlist"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/common/bitlist"
 	"github.com/daeuniverse/outbound/pool"
 )
 

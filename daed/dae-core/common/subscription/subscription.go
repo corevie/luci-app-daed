@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/config"
 	"github.com/sirupsen/logrus"
 )
 

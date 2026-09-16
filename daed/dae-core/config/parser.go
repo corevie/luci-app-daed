@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 func StringListParser(to reflect.Value, section *config_parser.Section) error {

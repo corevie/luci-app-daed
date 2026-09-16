@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/daeuniverse/dae/component/outbound/dialer"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/component/outbound/dialer"
+	"github.com/corevie/dae/pkg/config_parser"
 	"github.com/dlclark/regexp2"
 	"github.com/sirupsen/logrus"
 )

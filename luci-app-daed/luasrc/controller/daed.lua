@@ -5,8 +5,8 @@ local fs   = require "nixio.fs"
 module("luci.controller.daed", package.seeall)
 
 -- Editable config files (whitelist).
-local CONFIG_DIR = "/etc/dae/config.d"
-local CONFIG_ENTRY = "/etc/dae/config.dae"
+local CONFIG_DIR = "/etc/daed"
+local CONFIG_ENTRY = "/etc/daed/ech_tunnel.dae"
 
 function index()
 	if not nixio.fs.access("/etc/config/daed") then
@@ -15,6 +15,7 @@ function index()
 
 	entry({"admin",  "services", "daed"}, alias("admin", "services", "daed", "setting"),_("DAED"), 58).dependent = true
 	entry({"admin", "services", "daed", "setting"}, cbi("daed/basic"), _("Base Setting"), 1).leaf=true
+	entry({"admin", "services", "daed", "daed"}, template("daed/daed"), _("Dashboard"), 2).leaf = true
 	entry({"admin", "services", "daed", "log"}, cbi("daed/log"), _("Logs"), 3).leaf = true
 	entry({"admin", "services", "daed", "ech"}, cbi("daed/ech"), _("ECH Tunnel"), 4).leaf = true
 	entry({"admin", "services", "daed", "editor"}, call("action_editor"), _("Config Files"), 5).leaf = true
@@ -49,7 +50,7 @@ function act_ech_status()
 
 	local enabled = uci:get("daed", "ech", "enabled") or "0"
 	local listen = uci:get("daed", "ech", "listen") or "127.0.0.1:1080"
-	local config_file = uci:get("daed", "ech", "config_file") or "/etc/dae/config.d/ech_tunnel.dae"
+	local config_file = uci:get("daed", "ech", "config_file") or "/etc/daed/ech_tunnel.dae"
 
 	e.enabled = (enabled == "1")
 	e.listen = listen
@@ -122,7 +123,7 @@ function action_editor()
 	html[#html+1] = '<%+header%>'
 	html[#html+1] = '<div class="cbi-map">'
 	html[#html+1] = '<h2 name="content"><%:Config Files%></h2>'
-	html[#html+1] = '<p><%:Edit the dae runfiles under /etc/dae/. Changes apply after "Save & Apply" (hot reload).%></p>'
+	html[#html+1] = '<p><%:Edit the dae runfiles under /etc/daed/ (e.g. ECH tunnel fragments). The daemon restarts on save.%></p>'
 	html[#html+1] = '<ul style="margin:0 0 10px 20px">'
 	for _, f in ipairs(files) do
 		local link = luci.dispatcher.build_url("admin/services/daed/editor") .. "?file=" .. f.name
@@ -177,12 +178,15 @@ function action_editor_save()
 	fs.writefile(path, content)
 	sys.call("chmod 600 " .. path)
 
-	-- Validate with the real parser before applying.
-	local ok = sys.call("dae validate -c %q >/dev/null 2>&1" % path)
-	if ok ~= 0 then
-		http.write("SAVED, but 'dae validate' reported problems — check the log")
-		return
+	-- Validate with the real parser before applying (standalone dae only;
+	-- the dashboard build has no /usr/bin/dae, its config lives in wing.db).
+	if fs.access("/usr/bin/dae") then
+		local ok = sys.call("dae validate -c %q >/dev/null 2>&1" % path)
+		if ok ~= 0 then
+			http.write("SAVED, but 'dae validate' reported problems — check the log")
+			return
+		end
 	end
-	sys.call("/etc/init.d/dae hot_reload >/dev/null 2>&1 &")
-	http.write("OK: saved and reloaded")
+	sys.call("/etc/init.d/daed restart >/dev/null 2>&1 &")
+	http.write("OK: saved, restarting daemon")
 end

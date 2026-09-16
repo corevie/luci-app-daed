@@ -33,7 +33,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/daeuniverse/dae/component/echworkers"
+	"github.com/corevie/dae/component/echworkers"
 	D "github.com/daeuniverse/outbound/dialer"
 	"github.com/daeuniverse/outbound/netproxy"
 )

@@ -8,7 +8,7 @@ package dns
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/pkg/config_parser"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )

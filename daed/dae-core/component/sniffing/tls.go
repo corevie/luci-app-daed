@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"github.com/daeuniverse/dae/component/sniffing/internal/quicutils"
+	"github.com/corevie/dae/component/sniffing/internal/quicutils"
 )
 
 const (

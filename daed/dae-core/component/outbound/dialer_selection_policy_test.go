@@ -8,7 +8,7 @@ package outbound
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/config"
 	"github.com/stretchr/testify/require"
 )
 

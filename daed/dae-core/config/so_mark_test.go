@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 func TestNewTracksExplicitSoMarkFromDaeZero(t *testing.T) {

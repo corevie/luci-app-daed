@@ -17,8 +17,8 @@ import (
 	"unsafe"
 
 	"github.com/cilium/ebpf"
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/common/consts"
 	"golang.org/x/sys/unix"
 )
 

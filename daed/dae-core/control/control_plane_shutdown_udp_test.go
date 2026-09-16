@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/bits-and-blooms/bloom/v3"
-	"github.com/daeuniverse/dae/component/dns"
-	"github.com/daeuniverse/dae/component/outbound"
+	"github.com/corevie/dae/component/dns"
+	"github.com/corevie/dae/component/outbound"
 	"github.com/sirupsen/logrus"
 )
 

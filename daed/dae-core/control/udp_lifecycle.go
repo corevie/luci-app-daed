@@ -10,9 +10,9 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/common/errors"
-	componentdialer "github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/common/errors"
+	componentdialer "github.com/corevie/dae/component/outbound/dialer"
 )
 
 type udpLifecycleContext struct {

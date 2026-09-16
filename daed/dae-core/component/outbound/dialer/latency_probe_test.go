@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 )
 
 func configureLatencyProbeDialer(t *testing.T, d *Dialer, serverURL string) {

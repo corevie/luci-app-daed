@@ -1,4 +1,4 @@
-module github.com/daeuniverse/dae
+module github.com/corevie/dae
 
 go 1.26.0
 

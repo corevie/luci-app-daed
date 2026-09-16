@@ -14,8 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/daeuniverse/dae/common/consts"
-	internal "github.com/daeuniverse/dae/pkg/ebpf_internal"
+	"github.com/corevie/dae/common/consts"
+	internal "github.com/corevie/dae/pkg/ebpf_internal"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"

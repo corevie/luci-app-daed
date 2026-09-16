@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	componentdns "github.com/daeuniverse/dae/component/dns"
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/common/consts"
+	componentdns "github.com/corevie/dae/component/dns"
+	"github.com/corevie/dae/config"
 	dnsmessage "github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"

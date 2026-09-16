@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/common/netutils"
-	"github.com/daeuniverse/dae/component/dns"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/common/netutils"
+	"github.com/corevie/dae/component/dns"
 	"github.com/stretchr/testify/require"
 )
 

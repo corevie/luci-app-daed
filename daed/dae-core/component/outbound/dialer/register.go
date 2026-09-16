@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/daeuniverse/dae/component/daedns"
+	"github.com/corevie/dae/component/daedns"
 	D "github.com/daeuniverse/outbound/dialer"
 	"github.com/daeuniverse/outbound/dialer/stickyip"
 	"github.com/daeuniverse/outbound/protocol/direct"

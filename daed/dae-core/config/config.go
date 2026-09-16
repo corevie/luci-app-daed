@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 var (
@@ -35,10 +35,10 @@ type Global struct {
 	DialMode              string        `mapstructure:"dial_mode" default:"domain"`
 	DisableWaitingNetwork bool          `mapstructure:"disable_waiting_network" default:"false"`
 	DisableTHP            bool          `mapstructure:"disable_thp" default:"true"`
-	// Deprecated: not used as of https://github.com/daeuniverse/dae/pull/912.
+	// Deprecated: not used as of https://github.com/corevie/dae/pull/912.
 	EnableLocalTcpFastRedirect bool `mapstructure:"enable_local_tcp_fast_redirect" default:"false"`
 	AutoConfigKernelParameter  bool `mapstructure:"auto_config_kernel_parameter" default:"false"`
-	// Deprecated: not used as of https://github.com/daeuniverse/dae/pull/458.
+	// Deprecated: not used as of https://github.com/corevie/dae/pull/458.
 	AutoConfigFirewallRule bool          `mapstructure:"auto_config_firewall_rule" default:"false"`
 	SniffingTimeout        time.Duration `mapstructure:"sniffing_timeout" default:"30ms"`
 	TlsImplementation      string        `mapstructure:"tls_implementation" default:"tls"`

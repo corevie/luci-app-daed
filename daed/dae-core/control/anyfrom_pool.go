@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/component/outbound/dialer"
 	"golang.org/x/sys/unix"
 )
 

@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/daeuniverse/dae/component/dns"
+	"github.com/corevie/dae/component/dns"
 	"github.com/sirupsen/logrus"
 )
 

@@ -172,8 +172,23 @@ msgstr "dae 是基于 eBPF 的 Linux 高性能透明代理解决方案。本构�
 msgid "Config Entry File"
 msgstr "配置入口文件"
 
-msgid "Main dae config file (include-style). Fragments under /etc/dae/config.d/ are merged automatically; edit them on the Config Files page."
-msgstr "dae 主配置文件（include 形式）。/etc/dae/config.d/ 下的片段会自动合并；请在「配置文件」页编辑它们。"
+msgid "Set the DAED listen address"
+msgstr "设置监听地址"
+
+msgid "Dashboard Access Port"
+msgstr "仪表板访问端口"
+
+msgid "Leave empty to use listen port"
+msgstr "留空则使用监听端口"
+
+msgid "For reverse proxy scenarios, leave empty to use the port from listen address"
+msgstr "用于反向代理场景,留空则使用监听地址的端口"
+
+msgid "DAED is not running"
+msgstr "DAED 未运行"
+
+msgid "Please start the DAED service first and try again"
+msgstr "请先启动 DAED 服务后重试"
 
 msgid "Update Cycle (Weekday)"
 msgstr "更新周期（星期）"
@@ -187,8 +202,8 @@ msgstr "周期性热重载 dae，以便重新拉取订阅（例如 ECH 节点 gi
 msgid "Config Files"
 msgstr "配置文件"
 
-msgid "Edit the dae runfiles under /etc/dae/. Changes apply after \"Save & Apply\" (hot reload)."
-msgstr "编辑 /etc/dae/ 下的 dae 运行文件。保存并应用后热重载生效。"
+msgid "Edit the dae runfiles under /etc/daed/ (e.g. ECH tunnel fragments). The daemon restarts on save."
+msgstr "编辑 /etc/daed/ 下的 dae 运行文件（如 ECH 隧道片段）。保存后守护进程将重启。"
 
 msgid "Save & Apply"
 msgstr "保存并应用"

@@ -12,8 +12,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/daeuniverse/dae/cmd"
-	"github.com/daeuniverse/dae/common/json"
+	"github.com/corevie/dae/cmd"
+	"github.com/corevie/dae/common/json"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/json-iterator/go/extra"
 )

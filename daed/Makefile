@@ -19,43 +19,37 @@ PKG_SOURCE_VERSION:=4d6a43331f2f6e25961935b9e7ac09a7568bb2b4
 PKG_SOURCE_URL:=https://github.com/daeuniverse/daed.git
 PKG_MIRROR_HASH:=skip
 
-# ─────────────────────────────────────────────────────────────────────────
-# dae-wing / daed dashboard are NO LONGER built (this package now ships the
-# standalone dae binary from the vendored dae-core source below).
-#
-# Lines 7-17 above are kept byte-for-byte ONLY because .github/workflows/
-# autoupdate.yml rewrites them by fixed line number (it deletes and
-# re-inserts one line per variable to stay balanced). PKG_SOURCE_* would
-# download the old daed frontend tarball, which Build/Prepare discards.
-#
-# Real inputs of this package:
-#   daed/dae-core/         vendored dae-2.0.0 (kix fork) source tree
+# This package builds dae-wing (the daed dashboard daemon) on top of the
+# local corevie/dae core (ech-workers ECH tunnel, cfMac nodes.json and
+# GitHub Gist sync built in). Inputs:
+#   daed/dae-core/         vendored corevie/dae source tree
 #   daed/dae-kern-headers/ vendored dae_bpf_headers snapshot (eBPF headers)
-# ─────────────────────────────────────────────────────────────────────────
+#   ../patchset/           build_fixes.patch applied to dae-wing
+# Note: the standalone runfiles daemon (upstream "dae" package) is NOT
+# part of this repo; the dashboard daemon /usr/bin/daed embeds the same
+# core and drives it over its GraphQL API.
 
-PKG_LICENSE:=AGPL-3.0-only
-PKG_LICENSE_FILES:=dae-core/LICENSE
+PKG_LICENSE:=AGPL-3.0-only MIT
+PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=Tianling Shen <cnsztl@immortalwrt.org>
+
+DAED_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
+PKG_BUILD_DIR:=$(DAED_BUILD_DIR)/wing
 
 PKG_BUILD_DEPENDS:=golang/host bpf-headers
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=no-mips16
 
-GO_PKG:=github.com/daeuniverse/dae
-GO_PKG_EXCLUDES:=control/kern/tests
-
-DAED_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
-PKG_BUILD_DIR:=$(DAED_BUILD_DIR)/dae-core
+GO_PKG:=github.com/daeuniverse/dae-wing
 
 GO_PKG_LDFLAGS:= \
 	-s -w -buildid= \
-	-linkmode external -extldflags '-static -Wl,-s'
+	-linkmode external -extldflags '-static -Wl,-s' \
+	-X '$(GO_PKG)/db.AppDescription=$(PKG_NAME) is a integration solution of dae, API and UI.'
 GO_PKG_LDFLAGS_X:= \
-	$(GO_PKG)/cmd.Version=$(PKG_VERSION) \
-	$(GO_PKG)/common/consts.MaxMatchSetLen_=1024
-GO_PKG_TAGS:=trace
-
-PGO_PROFILE:=$(CURDIR)/pprof/default.pgo
+	$(GO_PKG)/db.AppName=$(PKG_NAME) \
+	$(GO_PKG)/db.AppVersion=$(DAED_VERSION)_$(WING_VERSION)_$(CORE_VERSION)
+GO_PKG_TAGS:=embedallowed,trace
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/bpf.mk
@@ -72,24 +66,23 @@ define Package/daed/Default
   SECTION:=net
   CATEGORY:=Network
   SUBMENU:=Web Servers/Proxies
-  URL:=https://github.com/daeuniverse/dae
+  URL:=https://github.com/daeuniverse/daed
 endef
 
 define Package/daed
   $(call Package/daed/Default)
-  TITLE:=A lightweight high-performance transparent proxy solution (dae)
-  USERID:=dae=:dae
+  TITLE:=A Modern Dashboard For dae
   DEPENDS:=$(GO_ARCH_DEPENDS) \
     +ca-bundle +kmod-sched-core +kmod-sched-bpf \
     +kmod-veth +v2ray-geoip +v2ray-geosite \
     +@KERNEL_XDP_SOCKETS \
-    +DAE_USE_VMLINUX_BTF:vmlinux-btf
+    +DAED_USE_VMLINUX_BTF:vmlinux-btf
 endef
 
 define Package/daed/config
 	choice
 		prompt "BTF source for CO-RE"
-		default DAE_USE_KERNEL_BTF
+		default DAED_USE_KERNEL_BTF
 		depends on PACKAGE_daed
 
 	config DAE_USE_KERNEL_BTF
@@ -102,16 +95,92 @@ define Package/daed/config
 endef
 
 define Package/daed/description
-  dae is a high-performance transparent proxy solution based on eBPF
-  (kix fork with the ech-workers ECH websocket tunnel, cfMac nodes.json
-  subscriptions and GitHub Gist sync built in). This package builds the
-  standalone dae binary from the vendored dae-core source; the daed
-  dashboard (dae-wing) is intentionally not included.
+  daed is a backend of dae, provides a method to bundle arbitrary
+  frontend, dae and geodata into one binary. This build wraps the local
+  corevie/dae core, so the dashboard manages a proxy engine with the
+  ech-workers ECH websocket tunnel, cfMac nodes.json subscriptions and
+  GitHub Gist sync built in (echws:// node links are accepted anywhere
+  dae takes node links).
 endef
 
 define Package/daed/conffiles
-/etc/dae/
+/etc/daed/wing.db
 /etc/config/daed
+endef
+
+NODE_VERSION:=v24.12.0
+NODE_DIST:=node-$(NODE_VERSION)-linux-x64
+NODE_URL:=https://nodejs.org/dist/$(NODE_VERSION)/$(NODE_DIST).tar.xz
+
+# RetargetWingAtCore rewrites dae-wing sources from github.com/daeuniverse/dae
+# to github.com/corevie/dae and pins the dependency to the local core via a
+# replace directive. Verified against dae-wing dc50308. The dae-config-dist
+# dependency and the wing's own module path are preserved.
+define RetargetWingAtCore
+	( \
+		grep -rl 'github.com/daeuniverse/dae' --include='*.go' --include='go.mod' . \
+			| grep -v '^./dae-core/' | xargs -r sed -i \
+			-e 's|github.com/daeuniverse/dae-config-dist|@@KEEP@@|g' \
+			-e 's|github.com/daeuniverse/dae-wing|@@WING@@|g' \
+			-e 's|github.com/daeuniverse/dae|github.com/corevie/dae|g' \
+			-e 's|@@KEEP@@|github.com/daeuniverse/dae-config-dist|g' \
+			-e 's|@@WING@@|github.com/daeuniverse/dae-wing|g' ; \
+		grep -q 'replace github.com/corevie/dae' go.mod || \
+			echo 'replace github.com/corevie/dae => ./dae-core' >> go.mod ; \
+	)
+endef
+
+# MergeCoreSums appends the core's go.sum entries into the wing module so
+# its dependency graph verifies without go mod tidy (tidy would pull test
+# dependencies the build never needs).
+define MergeCoreSums
+	( \
+		while read -r line; do \
+			grep -qxF "$$$line" go.sum || echo "$$$line" >> go.sum ; \
+		done < ./dae-core/go.sum ; \
+	)
+endef
+
+define Build/Prepare
+	( \
+		rm -rf $(DAED_BUILD_DIR) ; \
+		mkdir -p $(DAED_BUILD_DIR) ; \
+		$(TAR) --strip-components=1 -C $(DAED_BUILD_DIR) -xzf $(DL_DIR)/$(PKG_NAME)-$(PKG_VERSION).tar.gz ; \
+		git clone https://github.com/daeuniverse/dae-wing $(PKG_BUILD_DIR) && \
+			git -C $(PKG_BUILD_DIR) checkout $(WING_HASH_SHORT) ; \
+		rm -rf $(PKG_BUILD_DIR)/dae-core ; \
+		$(CP) $(CURDIR)/dae-core $(PKG_BUILD_DIR)/dae-core ; \
+		rm -rf $(PKG_BUILD_DIR)/dae-core/control/kern/headers \
+			$(PKG_BUILD_DIR)/dae-core/trace/kern/headers ; \
+		$(CP) $(CURDIR)/dae-kern-headers $(PKG_BUILD_DIR)/dae-core/control/kern/headers ; \
+		$(CP) $(CURDIR)/dae-kern-headers $(PKG_BUILD_DIR)/dae-core/trace/kern/headers ; \
+		pushd $(PKG_BUILD_DIR) ; \
+			$(call RetargetWingAtCore) ; \
+			patch --forward -p1 < $(CURDIR)/../patchset/build_fixes.patch || true ; \
+			$(call MergeCoreSums) ; \
+		popd ; \
+		mkdir -p $(DAED_BUILD_DIR)/.node_tmp/config ; \
+		wget -qO - "$(NODE_URL)" | tar -xJ -C $(DAED_BUILD_DIR)/.node_tmp --strip-components=1 ; \
+		export PATH="$(DAED_BUILD_DIR)/.node_tmp/bin:$$$$PATH" ; \
+		export XDG_CONFIG_HOME="$(DAED_BUILD_DIR)/.node_tmp/config" ; \
+		npm install -g pnpm ; \
+		pushd $(DAED_BUILD_DIR) ; \
+			pnpm install ; \
+			pnpm build --filter daed ; \
+		popd ; \
+		mkdir -p $(PKG_BUILD_DIR)/webrender/web ; \
+		cp -rf $(DAED_BUILD_DIR)/apps/web/dist/* $(PKG_BUILD_DIR)/webrender/web ; \
+		find $(PKG_BUILD_DIR)/webrender/web -name "*.map" -type f -delete ; \
+		find $(PKG_BUILD_DIR)/webrender/web -type f -size +4k ! -name "*.gz" ! -name "*.woff"  ! -name "*.woff2" -exec sh -c '\
+			gzip -9 -k "{}"; \
+			if [ "$$$$(stat -c %s {})" -lt "$$$$(stat -c %s {}.gz)" ]; then \
+				rm {}.gz; \
+			else \
+				rm {}; \
+			fi' \
+		";" ; \
+		rm -rf $(DAED_BUILD_DIR)/.node_tmp ; \
+	)
 endef
 
 DAE_CFLAGS:= \
@@ -120,40 +189,23 @@ DAE_CFLAGS:= \
 	-I$(BPF_HEADERS_DIR)/tools/lib \
 	-I$(BPF_HEADERS_DIR)/arch/$(BPF_KARCH)/include/asm/mach-generic
 
-define Build/Prepare
-	( \
-		rm -rf $(DAED_BUILD_DIR) ; \
-		mkdir -p $(DAED_BUILD_DIR) ; \
-		$(CP) $(CURDIR)/dae-core $(PKG_BUILD_DIR) ; \
-		rm -rf $(PKG_BUILD_DIR)/control/kern/headers \
-			$(PKG_BUILD_DIR)/trace/kern/headers ; \
-		$(CP) $(CURDIR)/dae-kern-headers $(PKG_BUILD_DIR)/control/kern/headers ; \
-		$(CP) $(CURDIR)/dae-kern-headers $(PKG_BUILD_DIR)/trace/kern/headers ; \
-		if [ -f "$(PGO_PROFILE)" ]; then \
-			$(CP) "$(PGO_PROFILE)" "$(PKG_BUILD_DIR)/default.pgo" ; \
-		fi ; \
-		pushd $(PKG_BUILD_DIR) ; \
-			go mod tidy ; \
-		popd ; \
-	)
-endef
-
 define Build/Compile
 	( \
 		pushd $(PKG_BUILD_DIR) ; \
 		export \
 		$(GO_GENERAL_BUILD_CONFIG_VARS) \
 		$(GO_PKG_BUILD_CONFIG_VARS) \
-		$(GO_PKG_BUILD_VARS) \
+		$(GO_PKG_BUILD_VARS) ; \
+		go generate ./... ; \
+		cd dae-core ; \
+		export \
 		BPF_CLANG="$(CLANG)" \
 		BPF_STRIP_FLAG="-strip=$(LLVM_STRIP)" \
 		BPF_CFLAGS="$(DAE_CFLAGS)" \
 		BPF_TARGET="bpfel,bpfeb" \
 		BPF_TRACE_TARGET="$(GO_ARCH)" ; \
 		go generate ./control/control.go ; \
-		if ! go generate ./trace/trace.go; then \
-			echo "trace generation failed; building without trace tags" ; \
-		fi ; \
+		go generate ./trace/trace.go ; \
 		popd ; \
 	)
 	$(call GoPackage/Build/Compile)
@@ -161,20 +213,14 @@ endef
 
 define Package/daed/install
 	$(call GoPackage/Package/Install/Bin,$(PKG_INSTALL_DIR))
-	$(INSTALL_DIR) $(1)/usr/bin/
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dae $(1)/usr/bin/dae
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/dae-wing $(1)/usr/bin/daed
 
-	$(INSTALL_DIR) $(1)/etc/dae/
-	$(INSTALL_CONF) $(CURDIR)/files/config.dae $(1)/etc/dae/config.dae
-	$(INSTALL_DIR) $(1)/etc/dae/config.d/
-	$(INSTALL_CONF) $(CURDIR)/files/config.d/dns.dae $(1)/etc/dae/config.d/dns.dae
-	$(INSTALL_CONF) $(CURDIR)/files/config.d/node.dae $(1)/etc/dae/config.d/node.dae
-	$(INSTALL_CONF) $(CURDIR)/files/config.d/route.dae $(1)/etc/dae/config.d/route.dae
-	$(INSTALL_CONF) $(PKG_BUILD_DIR)/example.dae $(1)/etc/dae/example.dae
-	$(INSTALL_DIR) $(1)/etc/config/
+	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) $(CURDIR)/files/daed.config $(1)/etc/config/daed
-	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_BIN) $(CURDIR)/files/daed.init $(1)/etc/init.d/dae
+
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) $(CURDIR)/files/daed.init $(1)/etc/init.d/daed
 endef
 
 $(eval $(call GoBinPackage,daed))

@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/component/dns"
-	"github.com/daeuniverse/dae/component/outbound"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/component/dns"
+	"github.com/corevie/dae/component/outbound"
 	dnsmessage "github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"

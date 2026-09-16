@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/daeuniverse/dae/cmd/internal"
+	"github.com/corevie/dae/cmd/internal"
 	"github.com/spf13/cobra"
 )
 

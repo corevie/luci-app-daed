@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/component/outbound/dialer"
 	"github.com/daeuniverse/outbound/pool"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"

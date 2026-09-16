@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/common/consts"
-	ob "github.com/daeuniverse/dae/component/outbound"
-	componentdialer "github.com/daeuniverse/dae/component/outbound/dialer"
+	"github.com/corevie/dae/common/consts"
+	ob "github.com/corevie/dae/component/outbound"
+	componentdialer "github.com/corevie/dae/component/outbound/dialer"
 	"github.com/sirupsen/logrus"
 )
 

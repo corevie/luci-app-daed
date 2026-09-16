@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/config"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ func init() {
 		Version,
 		fmt.Sprintf("go runtime %v %v/%v", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 		"Copyright (c) 2022-2026 @daeuniverse",
-		"License GNU AGPLv3 <https://github.com/daeuniverse/dae/blob/main/LICENSE>",
+		"License GNU AGPLv3 <https://github.com/corevie/dae/blob/main/LICENSE>",
 	}, "\n")
 }
 

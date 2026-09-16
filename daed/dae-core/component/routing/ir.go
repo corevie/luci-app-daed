@@ -6,8 +6,8 @@
 package routing
 
 import (
-	"github.com/daeuniverse/dae/config"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/config"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 // NormalizedProgram is the shared routing IR consumed by matcher builders.

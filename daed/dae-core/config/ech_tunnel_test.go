@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/pkg/config_parser"
 )
 
 func parseSections(t *testing.T, content string) *Config {

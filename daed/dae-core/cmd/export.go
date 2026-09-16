@@ -8,7 +8,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/daeuniverse/dae/config"
+	"github.com/corevie/dae/config"
 	"github.com/spf13/cobra"
 )
 

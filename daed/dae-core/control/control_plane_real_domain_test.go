@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/bits-and-blooms/bloom/v3"
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/common/netutils"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/common/netutils"
 	"github.com/daeuniverse/outbound/netproxy"
 	"github.com/sirupsen/logrus"
 )

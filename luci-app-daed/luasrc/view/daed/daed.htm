@@ -1,0 +1,64 @@
+<%+header%>
+<%
+	local running = luci.sys.exec("pgrep -x /usr/bin/daed")
+%>
+<% if tonumber(running) ~= nil then %>
+	<div class="cbi-map">
+		<iframe id="daed" class="daed-iframe"></iframe>
+	</div>
+	<style>
+	.daed-iframe {
+		width: 100%;
+		height: 100vh;
+		min-height: 780px;
+		border: none;
+		border-radius: .375rem;
+		box-shadow: rgba(0, 0, 0, 0.75) 0px 0px 15px -5px;
+		display: block;
+	}
+	</style>
+	<script type="text/javascript">
+		var listenAddr = "<%=luci.model.uci.cursor():get_first("daed", "daed", "listen_addr") or ''%>";
+		var dashboardPort = "<%=luci.model.uci.cursor():get_first("daed", "daed", "dashboard_port") or ''%>";
+
+		var port = "";
+		if (dashboardPort && dashboardPort.trim() !== "") {
+			port = dashboardPort.trim();
+		} else {
+			var portRegex = /:(\d+)/;
+			var match = listenAddr.match(portRegex);
+			if (match && match[1]) {
+				port = match[1];
+			}
+		}
+
+		if (port) {
+			var protocol = window.location.protocol;
+			var hostname = window.location.hostname;
+			var url = protocol + "//" + hostname;
+
+			if (!((protocol === "http:" && port === "80") || (protocol === "https:" && port === "443"))) {
+				url += ":" + port;
+			}
+
+			document.getElementById("daed").src = url;
+		}
+	</script>
+<% else %>
+	<style>
+	.notrunning { text-align: center; padding: 60px 20px; }
+	.notrunning svg { width: 90px; height: 90px; opacity: .8; }
+	.notrunning h1 { font-size: 25px; color: #333; margin: 16px 0; }
+	.notrunning p { font-size: 18px; color: #666; margin-bottom: 24px; }
+	</style>
+	<div class="notrunning">
+		<svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<circle cx="12" cy="12" r="10"/>
+			<line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+		</svg>
+		<h1><%:DAED is not running%></h1>
+		<p><%:Please start the DAED service first and try again%></p>
+	</div>
+<% end -%>
+
+<%+footer%>

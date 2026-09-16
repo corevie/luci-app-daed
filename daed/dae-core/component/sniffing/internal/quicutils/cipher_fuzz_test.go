@@ -8,7 +8,7 @@ package quicutils
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/common"
+	"github.com/corevie/dae/common"
 )
 
 func FuzzNewKeys(f *testing.F) {

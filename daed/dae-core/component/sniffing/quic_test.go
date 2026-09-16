@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae/component/sniffing/internal/quicutils"
+	"github.com/corevie/dae/component/sniffing/internal/quicutils"
 	"github.com/sirupsen/logrus"
 )
 

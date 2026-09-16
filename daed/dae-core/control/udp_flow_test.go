@@ -9,7 +9,7 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 )
 
 func mustParseUdpFlowAddrPort(t *testing.T, s string) netip.AddrPort {

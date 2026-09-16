@@ -8,7 +8,7 @@ package dialer
 import (
 	"testing"
 
-	"github.com/daeuniverse/dae/common/consts"
+	"github.com/corevie/dae/common/consts"
 )
 
 func TestNetworkTypeHealthKeyMapsTcpDnsToSharedTcpCollection(t *testing.T) {

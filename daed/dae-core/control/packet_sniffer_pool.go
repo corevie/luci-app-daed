@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/daeuniverse/dae/component/sniffing"
+	"github.com/corevie/dae/component/sniffing"
 )
 
 const (

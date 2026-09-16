@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/daeuniverse/dae/component/routing"
-	"github.com/daeuniverse/dae/pkg/config_parser"
+	"github.com/corevie/dae/component/routing"
+	"github.com/corevie/dae/pkg/config_parser"
 	dnsmessage "github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )

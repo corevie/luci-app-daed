@@ -21,10 +21,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/daeuniverse/dae/common"
-	"github.com/daeuniverse/dae/common/consts"
-	"github.com/daeuniverse/dae/common/netutils"
-	"github.com/daeuniverse/dae/component/dns"
+	"github.com/corevie/dae/common"
+	"github.com/corevie/dae/common/consts"
+	"github.com/corevie/dae/common/netutils"
+	"github.com/corevie/dae/component/dns"
 	"github.com/daeuniverse/outbound/netproxy"
 	"github.com/daeuniverse/outbound/pool"
 	tc "github.com/daeuniverse/outbound/protocol/tuic/common"
@@ -278,7 +278,7 @@ func (d *DoH) getClient() *http.Client {
 
 	return &http.Client{
 		Transport: roundTripper,
-		// Disable redirect https://github.com/daeuniverse/dae/pull/649#issuecomment-2379577896
+		// Disable redirect https://github.com/corevie/dae/pull/649#issuecomment-2379577896
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return fmt.Errorf("do not use a server that will redirect, upstream: %v", d.String())
 		},

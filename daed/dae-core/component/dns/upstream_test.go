@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/daeuniverse/dae/common/netutils"
+	"github.com/corevie/dae/common/netutils"
 )
 
 func TestUpstreamResolverConcurrentCallsCacheSuccessfulInitialization(t *testing.T) {
