@@ -56,7 +56,8 @@ include $(INCLUDE_DIR)/bpf.mk
 include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
 
 GO_PKG_BUILD_VARS+= \
-	GOFLAGS="-trimpath -buildvcs=false -pgo=auto"
+	GOFLAGS="-trimpath -buildvcs=false -pgo=auto" \
+	GOPROXY="https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,direct"
 
 GO_PKG_TARGET_VARS+= \
 	CGO_LDFLAGS="$(TARGET_LDFLAGS) -static -Wl,-s" \
@@ -135,9 +136,8 @@ endef
 # dependencies the build never needs).
 define MergeCoreSums
 	( \
-		while read -r line; do \
-			grep -qxF "$$$line" go.sum || echo "$$$line" >> go.sum ; \
-		done < ./dae-core/go.sum ; \
+		cat go.sum ./dae-core/go.sum | awk '!seen[$$$$0]++' > go.sum.tmp && \
+		mv go.sum.tmp go.sum ; \
 	)
 endef
 
@@ -160,7 +160,7 @@ define Build/Prepare
 			$(call MergeCoreSums) ; \
 		popd ; \
 		mkdir -p $(DAED_BUILD_DIR)/.node_tmp/config ; \
-		wget -qO - "$(NODE_URL)" | tar -xJ -C $(DAED_BUILD_DIR)/.node_tmp --strip-components=1 ; \
+		wget -4qO - "$(NODE_URL)" | tar -xJ -C $(DAED_BUILD_DIR)/.node_tmp --strip-components=1 ; \
 		export PATH="$(DAED_BUILD_DIR)/.node_tmp/bin:$$$$PATH" ; \
 		export XDG_CONFIG_HOME="$(DAED_BUILD_DIR)/.node_tmp/config" ; \
 		npm install -g pnpm ; \
