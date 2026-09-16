@@ -143,9 +143,11 @@ endef
 
 define Build/Prepare
 	( \
+		set -e ; \
 		rm -rf $(DAED_BUILD_DIR) ; \
 		mkdir -p $(DAED_BUILD_DIR) ; \
 		$(TAR) --strip-components=1 -C $(DAED_BUILD_DIR) -xzf $(DL_DIR)/$(PKG_NAME)-$(PKG_VERSION).tar.gz ; \
+		rm -rf $(PKG_BUILD_DIR) ; \
 		git clone https://github.com/daeuniverse/dae-wing $(PKG_BUILD_DIR) && \
 			git -C $(PKG_BUILD_DIR) checkout $(WING_HASH_SHORT) ; \
 		rm -rf $(PKG_BUILD_DIR)/dae-core ; \
@@ -166,7 +168,7 @@ define Build/Prepare
 		npm install -g pnpm ; \
 		pushd $(DAED_BUILD_DIR) ; \
 			pnpm install ; \
-			pnpm build --filter daed ; \
+			pnpm build --filter daed --env-mode=loose ; \
 		popd ; \
 		mkdir -p $(PKG_BUILD_DIR)/webrender/web ; \
 		cp -rf $(DAED_BUILD_DIR)/apps/web/dist/* $(PKG_BUILD_DIR)/webrender/web ; \
