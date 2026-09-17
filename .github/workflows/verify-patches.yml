@@ -1,0 +1,184 @@
+# Verifies that the patchset still applies to the dae-wing revision pinned in
+# daed/Makefile, and that the patched code builds and behaves.
+#
+# Why this exists: the release workflows build luci-app-daed, so they never
+# exercise daed/Makefile's Build/Prepare -- exactly the place where the
+# patchset is applied. A wing version bump (autoupdate.yml rewrites the pins)
+# can therefore invalidate patchset/ silently. This job fails on that instead.
+#
+# It mirrors the Makefile steps (RetargetWingAtCore, patch order, VerifyPatches,
+# MergeCoreSums, go generate) and then runs the behaviour tests from
+# patchset/tests/.
+#
+# The build uses -tags dae_stub_ebpf: the eBPF programs need the bpf-headers
+# toolchain and are exercised by the "Build 24 & 25" workflow instead.
+
+name: Verify patches
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'patchset/**'
+      - 'daed/Makefile'
+      - 'daed/dae-core/**'
+      - 'daed/files/**'
+      - '.github/workflows/verify-patches.yml'
+  pull_request:
+    paths:
+      - 'patchset/**'
+      - 'daed/Makefile'
+      - 'daed/dae-core/**'
+      - 'daed/files/**'
+
+permissions:
+  contents: read
+
+jobs:
+  patches:
+    name: Patch application and behaviour
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: false
+
+      - name: Clone dae-wing at the pinned revision
+        id: wing
+        run: |
+          set -euo pipefail
+          wing_hash="$(grep '^WING_VERSION:=' daed/Makefile | head -n1 | cut -d- -f2)"
+          if [ -z "$wing_hash" ]; then
+            echo "WING_VERSION is missing from daed/Makefile" >&2
+            exit 1
+          fi
+          echo "Pinned dae-wing revision: ${wing_hash}"
+          echo "hash=${wing_hash}" >> "$GITHUB_OUTPUT"
+          git clone --quiet https://github.com/daeuniverse/dae-wing wing
+          git -C wing checkout --quiet "$wing_hash"
+          git -C wing rev-parse HEAD
+
+      - name: Prepare the build tree (local core and kernel headers)
+        run: |
+          set -euo pipefail
+          rm -rf wing/dae-core
+          cp -a daed/dae-core wing/dae-core
+          rm -rf wing/dae-core/control/kern/headers wing/dae-core/trace/kern/headers
+          cp -a daed/dae-kern-headers wing/dae-core/control/kern/headers
+          cp -a daed/dae-kern-headers wing/dae-core/trace/kern/headers
+
+      - name: Retarget the wing at the local core
+        working-directory: wing
+        run: |
+          set -euo pipefail
+          grep -rl 'github.com/daeuniverse/dae' --include='*.go' --include='go.mod' . \
+            | grep -v '^./dae-core/' | xargs -r sed -i \
+            -e 's|github.com/daeuniverse/dae-config-dist|@@KEEP@@|g' \
+            -e 's|github.com/daeuniverse/dae-wing|@@WING@@|g' \
+            -e 's|github.com/daeuniverse/dae|github.com/corevie/dae|g' \
+            -e 's|@@KEEP@@|github.com/daeuniverse/dae-config-dist|g' \
+            -e 's|@@WING@@|github.com/daeuniverse/dae-wing|g'
+          grep -q 'replace github.com/corevie/dae' go.mod || \
+            echo 'replace github.com/corevie/dae => ./dae-core' >> go.mod
+
+      - name: Apply the patchset and verify the end state
+        working-directory: wing
+        run: |
+          set -euo pipefail
+          # build_fixes.patch is already upstream in the pinned revision, so it
+          # reports "previously applied" and leaves rejects for its two files.
+          patch --forward -p1 < ../patchset/build_fixes.patch || true
+          # The feature patch must apply cleanly: drop the Makefile's `|| true`
+          # here so a stale patch fails the job instead of the device.
+          patch --forward -p1 < ../patchset/feat-local-nodes-import.patch
+
+          # Same assertions the Makefile runs as VerifyPatches.
+          grep -q 'func SyncLocalSubscriptions' graphql/service/subscription/local.go
+          grep -q 'SyncLocalSubscriptions(context.TODO())' cmd/run.go
+          grep -q 'file://' graphql/service/subscription/mutation_utils.go
+          grep -q 'ResolveSubscriptionAsPlaintext' dae-core/common/subscription/subscription.go
+          grep -q 'func MergeEchTunnelFragments' dae/ech_tunnel_fragments.go
+          grep -q 'MergeEchTunnelFragments' graphql/service/config/mutation_utils.go
+          grep -q 'echtunnel.New()' dae/run.go
+          grep -q 'func ParseEchTunnelSections' dae-core/config/ech_tunnel_fragment.go
+
+          unexpected="$(find . -name '*.rej' -o -name '*.orig' \
+            | grep -v '^./graphql/service/config/global/generator/' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "unexpected reject files -- the patchset is stale:" >&2
+            echo "$unexpected" >&2
+            exit 1
+          fi
+          find . \( -name '*.rej' -o -name '*.orig' \) -delete
+
+      - name: Merge the core's go.sum entries
+        working-directory: wing
+        run: |
+          set -euo pipefail
+          cat go.sum ./dae-core/go.sum | awk '!seen[$0]++' > go.sum.tmp
+          mv go.sum.tmp go.sum
+
+      - name: Generate the dashboard config code
+        working-directory: wing
+        run: go generate ./graphql/service/config/global/...
+
+      - name: Build the packages the patchset touches
+        working-directory: wing
+        run: |
+          set -euo pipefail
+          GOOS=linux GOARCH=amd64 go build -tags dae_stub_ebpf \
+            ./dae/ ./graphql/service/config/ ./graphql/service/subscription/
+
+      - name: Run the drop-in and tunnel behaviour tests
+        working-directory: wing
+        run: |
+          set -euo pipefail
+          cp ../patchset/tests/wing-local-nodes_test.go graphql/service/subscription/
+          cp ../patchset/tests/wing-ech-tunnel-fragments_test.go dae/
+          GOOS=linux GOARCH=amd64 go test -tags dae_stub_ebpf -v \
+            ./graphql/service/subscription/ ./dae/
+
+  core:
+    name: Core unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: daed/dae-core/go.sum
+
+      - name: Test the core packages the patchset relies on
+        working-directory: daed/dae-core
+        run: go test ./config/ ./component/echtunnel/ ./common/subscription/
+
+  luci:
+    name: LuCI host-side suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Install lua
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua5.4
+
+      - name: Run the suites
+        run: |
+          set -euo pipefail
+          for t in test_controller.lua test_ech_download.lua test_ech_lua.lua \
+                   test_gist_sync_script.lua test_paths_contract.lua; do
+            echo "== ${t}"
+            lua5.4 "$t"
+          done
+          echo "== test_luci_daed_cron.sh"
+          sh test_luci_daed_cron.sh
