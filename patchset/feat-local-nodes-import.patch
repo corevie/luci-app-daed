@@ -1,5 +1,5 @@
---- wing-a/cmd/run.go	2026-09-17 09:18:54
-+++ wing-b/cmd/run.go	2026-09-17 09:18:58
+--- a/cmd/run.go	2026-09-17 05:49:21.437475554 +0000
++++ b/cmd/run.go	2026-09-17 05:49:21.541874559 +0000
 @@ -82,6 +82,9 @@
  				logrus.Fatalln("Failed to init db:", err)
  			}
@@ -10,8 +10,8 @@
  			subscription.UpdateAll(context.TODO())
  
  			// Run dae.
---- wing-a/dae/ech_tunnel_fragments.go	1970-01-01 08:00:00
-+++ wing-b/dae/ech_tunnel_fragments.go	2026-09-17 13:09:49
+--- a/dae/ech_tunnel_fragments.go	1970-01-01 00:00:00.000000000 +0000
++++ b/dae/ech_tunnel_fragments.go	2026-09-17 05:49:21.542115543 +0000
 @@ -0,0 +1,84 @@
 +/*
 + * SPDX-License-Identifier: AGPL-3.0-only
@@ -97,8 +97,8 @@
 +	c.EchTunnel = tunnel
 +	return nil
 +}
---- wing-a/dae/run.go	2026-09-17 09:18:54
-+++ wing-b/dae/run.go	2026-09-17 13:10:12
+--- a/dae/run.go	2026-09-17 05:49:21.444990903 +0000
++++ b/dae/run.go	2026-09-17 05:49:21.542291344 +0000
 @@ -12,6 +12,7 @@
  	"sync"
  
@@ -136,20 +136,11 @@
  	if e := c.Close(); e != nil {
  		return fmt.Errorf("close control plane: %w", e)
  	}
---- wing-a/graphql/service/config/mutation_utils.go	2026-09-17 09:18:54
-+++ wing-b/graphql/service/config/mutation_utils.go	2026-09-17 13:11:02
-@@ -15,13 +15,14 @@
- 	"strings"
- 	"sync"
- 
-+	daeConfig "github.com/corevie/dae/config"
-+	"github.com/corevie/dae/pkg/config_parser"
- 	"github.com/daeuniverse/dae-config-dist/common"
- 	"github.com/daeuniverse/dae-config-dist/dae"
- 	"github.com/daeuniverse/dae-config-dist/db"
- 	"github.com/daeuniverse/dae-config-dist/graphql/service/config/global"
--	daeConfig "github.com/corevie/dae/config"
--	"github.com/corevie/dae/pkg/config_parser"
+--- a/graphql/service/config/mutation_utils.go	2026-09-17 05:49:21.439610111 +0000
++++ b/graphql/service/config/mutation_utils.go	2026-09-17 05:49:21.546097572 +0000
+@@ -22,6 +22,7 @@
+ 	daeConfig "github.com/corevie/dae/config"
+ 	"github.com/corevie/dae/pkg/config_parser"
  	"github.com/graph-gophers/graphql-go"
 +	"github.com/sirupsen/logrus"
  	"gorm.io/gorm"
@@ -168,8 +159,8 @@
  	/// Fill in necessary groups and nodes.
  	// Find groups needed by routing.
  	outbounds := dae.NecessaryOutbounds(&c.Routing)
---- wing-a/graphql/service/subscription/local.go	1970-01-01 08:00:00
-+++ wing-b/graphql/service/subscription/local.go	2026-09-17 13:09:27
+--- a/graphql/service/subscription/local.go	1970-01-01 00:00:00.000000000 +0000
++++ b/graphql/service/subscription/local.go	2026-09-17 05:49:21.551291177 +0000
 @@ -0,0 +1,336 @@
 +/*
 + * SPDX-License-Identifier: AGPL-3.0-only
@@ -189,8 +180,8 @@
 +	"time"
 +
 +	daesub "github.com/corevie/dae/common/subscription"
-+	"github.com/daeuniverse/dae-config-dist/common"
-+	"github.com/daeuniverse/dae-config-dist/db"
++	"github.com/daeuniverse/dae-wing/common"
++	"github.com/daeuniverse/dae-wing/db"
 +	"github.com/sirupsen/logrus"
 +	"gorm.io/gorm"
 +	"gorm.io/gorm/clause"
@@ -507,8 +498,8 @@
 +	}
 +	return links, nil
 +}
---- wing-a/graphql/service/subscription/mutation_utils.go	2026-09-17 09:18:54
-+++ wing-b/graphql/service/subscription/mutation_utils.go	2026-09-17 09:19:40
+--- a/graphql/service/subscription/mutation_utils.go	2026-09-17 05:49:21.441676535 +0000
++++ b/graphql/service/subscription/mutation_utils.go	2026-09-17 05:49:21.548291233 +0000
 @@ -11,6 +11,8 @@
  	"fmt"
  	"io"
@@ -518,16 +509,15 @@
  	"sync"
  	"time"
  
-@@ -19,7 +21,7 @@
- 	"github.com/daeuniverse/dae-config-dist/db"
- 	"github.com/daeuniverse/dae-config-dist/graphql/internal"
- 	"github.com/daeuniverse/dae-config-dist/graphql/service/node"
+@@ -19,7 +21,6 @@
+ 	"github.com/daeuniverse/dae-wing/db"
+ 	"github.com/daeuniverse/dae-wing/graphql/internal"
+ 	"github.com/daeuniverse/dae-wing/graphql/service/node"
 -	"github.com/corevie/dae/common/subscription"
-+
  	"github.com/go-co-op/gocron"
  	"github.com/graph-gophers/graphql-go"
  	"github.com/sirupsen/logrus"
-@@ -35,6 +37,11 @@
+@@ -35,6 +36,11 @@
  
  func fetchLinks(subscriptionLink string) (links []string, err error) {
  	timeout := 10 * time.Second
@@ -539,7 +529,7 @@
  	// Try with direct by default.
  	links, err = _fetchLinks(subscriptionLink, http.DefaultTransport, timeout/2)
  	if err != nil {
-@@ -54,6 +61,14 @@
+@@ -54,6 +60,14 @@
  
  func _fetchLinks(subscriptionLink string, transport http.RoundTripper, timeout time.Duration) (links []string, err error) {
  	/// Resolve subscription to node links.
@@ -554,7 +544,7 @@
  	// Fetch subscription link.
  	var (
  		b    []byte
-@@ -81,17 +96,8 @@
+@@ -81,17 +95,8 @@
  		return nil, err
  	}
  

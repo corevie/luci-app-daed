@@ -31,7 +31,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daeuniverse/dae-config-dist/db"
+	"github.com/daeuniverse/dae-wing/db"
 )
 
 const cfMacFixture = `{
