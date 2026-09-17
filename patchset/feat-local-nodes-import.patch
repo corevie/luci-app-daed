@@ -1,6 +1,5 @@
-diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/cmd/run.go b/cmd/run.go
---- a/cmd/run.go	2026-09-16 11:19:32.841829938 +0000
-+++ b/cmd/run.go	2026-09-16 11:19:32.849499064 +0000
+--- wing-a/cmd/run.go	2026-09-17 09:18:54
++++ wing-b/cmd/run.go	2026-09-17 09:18:58
 @@ -82,6 +82,9 @@
  				logrus.Fatalln("Failed to init db:", err)
  			}
@@ -11,10 +10,167 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/c
  			subscription.UpdateAll(context.TODO())
  
  			// Run dae.
-diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/graphql/service/subscription/local.go b/graphql/service/subscription/local.go
---- a/graphql/service/subscription/local.go	1970-01-01 00:00:00.000000000 +0000
-+++ b/graphql/service/subscription/local.go	2026-09-16 11:19:32.853923223 +0000
-@@ -0,0 +1,141 @@
+--- wing-a/dae/ech_tunnel_fragments.go	1970-01-01 08:00:00
++++ wing-b/dae/ech_tunnel_fragments.go	2026-09-17 13:09:49
+@@ -0,0 +1,84 @@
++/*
++ * SPDX-License-Identifier: AGPL-3.0-only
++ * Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
++ *
++ * Drop-in config fragments for the dashboard build.
++ *
++ * The dashboard keeps globals, DNS, routing, nodes and subscriptions in its
++ * database, so those never come from files. The ECH tunnel has no database
++ * representation: the LuCI "ECH Tunnel" page writes it as an ech_tunnel
++ * section into <dir>/*.dae, and this is what feeds that section to the core.
++ */
++
++package dae
++
++import (
++	"os"
++	"path/filepath"
++
++	daeConfig "github.com/corevie/dae/config"
++	"github.com/corevie/dae/pkg/config_parser"
++	"github.com/sirupsen/logrus"
++)
++
++// EchTunnelFragmentDir is scanned on every config load for *.dae fragments.
++var EchTunnelFragmentDir = "/etc/daed"
++
++// MergeEchTunnelFragments applies the ech_tunnel section found in the *.dae
++// fragments under dir to c. Only that section is taken from fragments: the
++// database stays authoritative for everything else, so a stray global/routing
++// block in an edited fragment cannot override the dashboard.
++//
++// Fragments that cannot be parsed, are writable by group/others, or declare
++// the section twice are reported and skipped rather than taken as fatal: the
++// tunnel is optional, the rest of the config is not.
++func MergeEchTunnelFragments(c *daeConfig.Config, dir string) error {
++	if c == nil || dir == "" {
++		return nil
++	}
++	paths, err := filepath.Glob(filepath.Join(dir, "*.dae"))
++	if err != nil || len(paths) == 0 {
++		return nil
++	}
++	var sections []*config_parser.Section
++	for _, path := range paths {
++		fi, err := os.Stat(path)
++		if err != nil {
++			continue
++		}
++		// Same rule dae applies to config files: refuse to load a tunnel
++		// definition that any local user could rewrite.
++		if perm := fi.Mode().Perm(); perm&0037 != 0 {
++			logrus.Warnf("[ech_tunnel] %v has mode %04o (writable by group/others); skipping", path, perm)
++			continue
++		}
++		b, err := os.ReadFile(path)
++		if err != nil {
++			logrus.Warnf("[ech_tunnel] read %v: %v", path, err)
++			continue
++		}
++		parsed, err := config_parser.Parse(string(b))
++		if err != nil {
++			logrus.Warnf("[ech_tunnel] parse %v: %v", path, err)
++			continue
++		}
++		for _, section := range parsed {
++			if section != nil && section.Name == "ech_tunnel" {
++				logrus.Infof("[ech_tunnel] using section from %v", path)
++				sections = append(sections, section)
++			}
++		}
++	}
++	if len(sections) == 0 {
++		return nil
++	}
++	tunnel, err := daeConfig.ParseEchTunnelSections(sections)
++	if err != nil {
++		return err
++	}
++	if tunnel == nil {
++		return nil
++	}
++	c.EchTunnel = tunnel
++	return nil
++}
+--- wing-a/dae/run.go	2026-09-17 09:18:54
++++ wing-b/dae/run.go	2026-09-17 13:10:12
+@@ -12,6 +12,7 @@
+ 	"sync"
+ 
+ 	"github.com/corevie/dae/common/netutils"
++	"github.com/corevie/dae/component/echtunnel"
+ 	daeConfig "github.com/corevie/dae/config"
+ 	"github.com/corevie/dae/control"
+ 	"github.com/corevie/dae/pkg/config_parser"
+@@ -75,6 +76,12 @@
+ 		return err
+ 	}
+ 
++	// Standalone ECH websocket tunnel (ech_tunnel section), if configured.
++	// The dashboard takes that section from a drop-in fragment instead of the
++	// database, so it is merged here; see MergeEchTunnelFragments.
++	echTunnel := echtunnel.New()
++	echTunnel.Refresh(log, &conf.Global, conf.EchTunnel)
++
+ 	// Serve tproxy TCP/UDP server util signals.
+ 	var listener *control.Listener
+ 	go func() {
+@@ -189,6 +196,7 @@
+ 			oldC := c
+ 			c = newC
+ 			conf = newConf
++			echTunnel.Refresh(log, &newConf.Global, newConf.EchTunnel)
+ 			reloading = true
+ 			/* dae-wing start */
+ 			chCallback = newReloadMsg.Callback
+@@ -198,6 +206,7 @@
+ 			oldC.Close()
+ 		}
+ 	}
++	echTunnel.Stop(log)
+ 	if e := c.Close(); e != nil {
+ 		return fmt.Errorf("close control plane: %w", e)
+ 	}
+--- wing-a/graphql/service/config/mutation_utils.go	2026-09-17 09:18:54
++++ wing-b/graphql/service/config/mutation_utils.go	2026-09-17 13:11:02
+@@ -15,13 +15,14 @@
+ 	"strings"
+ 	"sync"
+ 
++	daeConfig "github.com/corevie/dae/config"
++	"github.com/corevie/dae/pkg/config_parser"
+ 	"github.com/daeuniverse/dae-config-dist/common"
+ 	"github.com/daeuniverse/dae-config-dist/dae"
+ 	"github.com/daeuniverse/dae-config-dist/db"
+ 	"github.com/daeuniverse/dae-config-dist/graphql/service/config/global"
+-	daeConfig "github.com/corevie/dae/config"
+-	"github.com/corevie/dae/pkg/config_parser"
+ 	"github.com/graph-gophers/graphql-go"
++	"github.com/sirupsen/logrus"
+ 	"gorm.io/gorm"
+ 	"gorm.io/gorm/clause"
+ )
+@@ -318,6 +319,12 @@
+ 	if err != nil {
+ 		return 0, err
+ 	}
++	// The ECH tunnel has no database representation: it comes from the drop-in
++	// fragment the LuCI "ECH Tunnel" page writes (no-op when absent). A broken
++	// fragment must not take the whole config down, so it is only logged.
++	if err := dae.MergeEchTunnelFragments(c, dae.EchTunnelFragmentDir); err != nil {
++		logrus.WithError(err).Errorln("[ech_tunnel] ignoring the drop-in fragment")
++	}
+ 	/// Fill in necessary groups and nodes.
+ 	// Find groups needed by routing.
+ 	outbounds := dae.NecessaryOutbounds(&c.Routing)
+--- wing-a/graphql/service/subscription/local.go	1970-01-01 08:00:00
++++ wing-b/graphql/service/subscription/local.go	2026-09-17 13:09:27
+@@ -0,0 +1,336 @@
 +/*
 + * SPDX-License-Identifier: AGPL-3.0-only
 + * Copyright (c) 2023, daeuniverse Organization <team@v2raya.org>
@@ -24,15 +180,17 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +
 +import (
 +	"context"
++	"encoding/json"
 +	"errors"
++	"io"
 +	"os"
 +	"path/filepath"
 +	"strings"
 +	"time"
 +
 +	daesub "github.com/corevie/dae/common/subscription"
-+	"github.com/daeuniverse/dae-wing/common"
-+	"github.com/daeuniverse/dae-wing/db"
++	"github.com/daeuniverse/dae-config-dist/common"
++	"github.com/daeuniverse/dae-config-dist/db"
 +	"github.com/sirupsen/logrus"
 +	"gorm.io/gorm"
 +	"gorm.io/gorm/clause"
@@ -47,7 +205,72 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +//
 +// The LuCI "ECH Tunnel" page (Gist sync) writes these files, so nodes
 +// downloaded from a gist show up in the dashboard without manual pasting.
-+const LocalNodesDir = "/etc/daed/nodes.d"
++var LocalNodesDir = "/etc/daed/nodes.d"
++
++// SyncReportPath is where the outcome of the last scan is published, so the
++// LuCI page can show what the daemon actually did with each drop-in instead of
++// only "the file was written". It lives on tmpfs: it describes one startup.
++var SyncReportPath = "/tmp/daed-nodes-sync.json"
++
++// syncReportEntry is the per-file import outcome surfaced to the UI.
++type syncReportEntry struct {
++	Tag    string `json:"tag"`
++	File   string `json:"file"`
++	Status string `json:"status"` // imported | skipped | invalid | failed
++	Nodes  int    `json:"nodes"`
++	// Retained counts nodes the source no longer lists but which stayed in the
++	// database because they are pinned to a group (upstream keeps those), i.e.
++	// stale entries the user may want to review.
++	Retained int    `json:"retained"`
++	Error    string `json:"error,omitempty"`
++}
++
++type syncReport struct {
++	GeneratedAt int64             `json:"generatedAt"`
++	Entries     []syncReportEntry `json:"entries"`
++}
++
++// writeSyncReport publishes the scan result atomically; failures are logged
++// only, since a missing report must never break the import itself.
++func writeSyncReport(entries []syncReportEntry) {
++	if entries == nil {
++		entries = []syncReportEntry{}
++	}
++	b, err := json.Marshal(syncReport{GeneratedAt: time.Now().Unix(), Entries: entries})
++	if err != nil {
++		logrus.Warnf("[local-nodes] marshal sync report: %v", err)
++		return
++	}
++	tmp := SyncReportPath + ".tmp"
++	if err := os.WriteFile(tmp, b, 0600); err != nil {
++		logrus.Warnf("[local-nodes] write sync report: %v", err)
++		return
++	}
++	if err := os.Rename(tmp, SyncReportPath); err != nil {
++		logrus.Warnf("[local-nodes] publish sync report: %v", err)
++	}
++}
++
++// countRetainedNodes reports how many nodes of the subscription are still in
++// the database although the freshly fetched link set no longer contains them
++// (UpdateById deliberately keeps nodes that are pinned to a group).
++func countRetainedNodes(ctx context.Context, subID uint, fetched []string) int {
++	fresh := make(map[string]struct{}, len(fetched))
++	for _, link := range fetched {
++		fresh[link] = struct{}{}
++	}
++	var nodes []db.Node
++	if err := db.DB(ctx).Where("subscription_id = ?", subID).Find(&nodes).Error; err != nil {
++		return 0
++	}
++	retained := 0
++	for _, node := range nodes {
++		if _, ok := fresh[node.Link]; !ok {
++			retained++
++		}
++	}
++	return retained
++}
 +
 +// SyncLocalSubscriptions imports every drop-in under LocalNodesDir as a
 +// subscription and binds it to a group of the same name, so its nodes are
@@ -56,13 +279,18 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +// It is idempotent: an existing subscription with the same tag and link is
 +// refreshed in place, and the group binding is created with DO NOTHING. A
 +// tag already owned by another link (a user-managed subscription) is left
-+// untouched instead of being hijacked.
++// untouched instead of being hijacked -- and reported as "skipped" so the UI
++// can tell the user why nothing showed up.
 +func SyncLocalSubscriptions(ctx context.Context) {
++	pruneLocalSubscriptions(ctx)
 +	entries, err := os.ReadDir(LocalNodesDir)
 +	if err != nil {
-+		// The directory missing simply means the feature is unused.
++		// The directory missing simply means the feature is unused; publish an
++		// empty report so the UI can distinguish "not scanned" from "no files".
++		writeSyncReport(nil)
 +		return
 +	}
++	report := make([]syncReportEntry, 0, len(entries))
 +	for _, entry := range entries {
 +		if entry.IsDir() {
 +			continue
@@ -73,8 +301,12 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +			continue
 +		}
 +		tag := strings.TrimSuffix(name, ext)
++		record := syncReportEntry{Tag: tag, File: filepath.Join(LocalNodesDir, name)}
 +		if err := common.ValidateTag(tag); err != nil {
 +			logrus.Warnf("[local-nodes] skip %v: %v", name, err)
++			record.Status = "invalid"
++			record.Error = err.Error()
++			report = append(report, record)
 +			continue
 +		}
 +		link := "file://" + filepath.Join(LocalNodesDir, name)
@@ -92,22 +324,136 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +			}
 +			if err = db.DB(ctx).Create(&m).Error; err != nil {
 +				logrus.Warnf("[local-nodes] create subscription %v: %v", tag, err)
++				record.Status = "failed"
++				record.Error = err.Error()
++				report = append(report, record)
 +				continue
 +			}
 +			logrus.Infof("[local-nodes] created subscription %v from %v", tag, link)
 +		case err != nil:
 +			logrus.Warnf("[local-nodes] lookup subscription %v: %v", tag, err)
++			record.Status = "failed"
++			record.Error = err.Error()
++			report = append(report, record)
 +			continue
 +		case m.Link != link:
 +			logrus.Warnf("[local-nodes] tag %v is already used by subscription %v; skip", tag, m.Link)
++			record.Status = "skipped"
++			record.Error = "the tag is already used by subscription " + m.Link
++			report = append(report, record)
 +			continue
 +		}
 +
++		// Snapshot the links before the import so stale (pinned) leftovers can
++		// be reported afterwards.
++		fetched, fetchErr := fetchLinks(link)
 +		if _, err := UpdateById(ctx, m.ID); err != nil {
 +			logrus.Warnf("[local-nodes] import nodes of %v: %v", tag, err)
++			record.Status = "failed"
++			record.Error = err.Error()
++			report = append(report, record)
++			continue
 +		}
++		var count int64
++		if err := db.DB(ctx).Model(&db.Node{}).Where("subscription_id = ?", m.ID).Count(&count).Error; err != nil {
++			logrus.Warnf("[local-nodes] count nodes of %v: %v", tag, err)
++		}
++		if fetchErr == nil {
++			record.Retained = countRetainedNodes(ctx, m.ID, fetched)
++		}
++		record.Status = "imported"
++		record.Nodes = int(count)
++		report = append(report, record)
 +		ensureLocalGroup(ctx, tag, m.ID)
 +	}
++	writeSyncReport(report)
++}
++
++// pruneLocalSubscriptions removes subscription rows previously imported from
++// drop-ins under LocalNodesDir whose backing file is gone, together with
++// their nodes, group bindings and any auto-created orphan groups.
++func pruneLocalSubscriptions(ctx context.Context) {
++	prefix := "file://" + LocalNodesDir + "/"
++	var subs []db.Subscription
++	if err := db.DB(ctx).Where("link like ?", prefix+"%").Find(&subs).Error; err != nil {
++		logrus.Warnf("[local-nodes] list drop-in subscriptions: %v", err)
++		return
++	}
++	var ids []uint
++	removedNames := make(map[string]bool)
++	for _, sub := range subs {
++		path := strings.TrimPrefix(sub.Link, "file://")
++		if _, err := os.Stat(path); err == nil {
++			continue
++		}
++		ids = append(ids, sub.ID)
++		if sub.Tag != nil {
++			removedNames[*sub.Tag] = true
++		}
++	}
++	if len(ids) == 0 {
++		return
++	}
++	tx := db.BeginTx(ctx)
++	committed := false
++	defer func() {
++		if !committed {
++			tx.Rollback()
++		}
++	}()
++	var bindings []db.GroupSubscription
++	if err := tx.Where("subscription_id in ?", ids).Find(&bindings).Error; err != nil {
++		logrus.Warnf("[local-nodes] look up group bindings: %v", err)
++		return
++	}
++	var groupIds []uint
++	for _, b := range bindings {
++		groupIds = append(groupIds, b.GroupID)
++	}
++	if err := tx.Where("subscription_id in ?", ids).Delete(&db.Node{}).Error; err != nil {
++		logrus.Warnf("[local-nodes] remove nodes: %v", err)
++		return
++	}
++	if err := tx.Where("subscription_id in ?", ids).Delete(&db.GroupSubscription{}).Error; err != nil {
++		logrus.Warnf("[local-nodes] remove group bindings: %v", err)
++		return
++	}
++	if err := tx.Where("id in ?", ids).Select(clause.Associations).Delete(&db.Subscription{}).Error; err != nil {
++		logrus.Warnf("[local-nodes] remove subscriptions: %v", err)
++		return
++	}
++	for _, id := range ids {
++		RemoveUpdateScheduler(id)
++	}
++	for _, groupId := range groupIds {
++		var count int64
++		if err := tx.Model(&db.GroupSubscription{}).Where("group_id = ?", groupId).Count(&count).Error; err != nil {
++			continue
++		}
++		if count > 0 {
++			continue
++		}
++		var g db.Group
++		if err := tx.Where("id = ?", groupId).First(&g).Error; err != nil {
++			continue
++		}
++		if g.SystemID != nil || !removedNames[g.Name] {
++			continue
++		}
++		if err := tx.Where("group_id = ?", groupId).Delete(&db.GroupPolicyParam{}).Error; err != nil {
++			logrus.Warnf("[local-nodes] remove group policy params: %v", err)
++			continue
++		}
++		if err := tx.Where("id = ?", groupId).Delete(&db.Group{}).Error; err != nil {
++			logrus.Warnf("[local-nodes] remove orphan group: %v", err)
++		}
++	}
++	if err := tx.Commit().Error; err != nil {
++		logrus.Warnf("[local-nodes] commit prune: %v", err)
++		return
++	}
++	committed = true
++	logrus.Infof("[local-nodes] removed %v stale drop-in subscription(s)", len(ids))
 +}
 +
 +// ensureLocalGroup makes sure a group named after the subscription exists
@@ -139,7 +485,7 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +// subscription resolver).
 +func resolveSubscriptionContent(b []byte) (links []string, err error) {
 +	noLogger := logrus.New()
-+	noLogger.SetOutput(nil)
++	noLogger.SetOutput(io.Discard)
 +
 +	if daesub.LooksLikeCfMacNodes(b) {
 +		if links, err = daesub.ResolveSubscriptionAsCfMacNodes(b); err == nil && len(links) > 0 {
@@ -150,15 +496,19 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
 +	if links, err = daesub.ResolveSubscriptionAsSIP008(noLogger, b); err == nil && len(links) > 0 {
 +		return links, nil
 +	}
++	// Plain line lists (not base64) before the base64 fallback, whose decoder
++	// simply fails on them -- this is what makes <tag>.txt work.
++	if links = daesub.ResolveSubscriptionAsPlaintext(b); len(links) > 0 {
++		return links, nil
++	}
 +	links = daesub.ResolveSubscriptionAsBase64(noLogger, b)
 +	if len(links) == 0 {
 +		return nil, errors.New("fetched but no any node was found")
 +	}
 +	return links, nil
 +}
-diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/graphql/service/subscription/mutation_utils.go b/graphql/service/subscription/mutation_utils.go
---- a/graphql/service/subscription/mutation_utils.go	2026-09-16 11:19:32.846177210 +0000
-+++ b/graphql/service/subscription/mutation_utils.go	2026-09-16 11:19:32.853977251 +0000
+--- wing-a/graphql/service/subscription/mutation_utils.go	2026-09-17 09:18:54
++++ wing-b/graphql/service/subscription/mutation_utils.go	2026-09-17 09:19:40
 @@ -11,6 +11,8 @@
  	"fmt"
  	"io"
@@ -168,15 +518,16 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
  	"sync"
  	"time"
  
-@@ -19,7 +21,6 @@
- 	"github.com/daeuniverse/dae-wing/db"
- 	"github.com/daeuniverse/dae-wing/graphql/internal"
- 	"github.com/daeuniverse/dae-wing/graphql/service/node"
+@@ -19,7 +21,7 @@
+ 	"github.com/daeuniverse/dae-config-dist/db"
+ 	"github.com/daeuniverse/dae-config-dist/graphql/internal"
+ 	"github.com/daeuniverse/dae-config-dist/graphql/service/node"
 -	"github.com/corevie/dae/common/subscription"
++
  	"github.com/go-co-op/gocron"
  	"github.com/graph-gophers/graphql-go"
  	"github.com/sirupsen/logrus"
-@@ -35,6 +36,11 @@
+@@ -35,6 +37,11 @@
  
  func fetchLinks(subscriptionLink string) (links []string, err error) {
  	timeout := 10 * time.Second
@@ -188,7 +539,7 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
  	// Try with direct by default.
  	links, err = _fetchLinks(subscriptionLink, http.DefaultTransport, timeout/2)
  	if err != nil {
-@@ -54,6 +60,14 @@
+@@ -54,6 +61,14 @@
  
  func _fetchLinks(subscriptionLink string, transport http.RoundTripper, timeout time.Duration) (links []string, err error) {
  	/// Resolve subscription to node links.
@@ -203,7 +554,7 @@ diff -Nur -x .git -x dae-core -x generated_input.go -x generated_resolver.go a/g
  	// Fetch subscription link.
  	var (
  		b    []byte
-@@ -81,17 +95,8 @@
+@@ -81,17 +96,8 @@
  		return nil, err
  	}
  

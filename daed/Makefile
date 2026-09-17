@@ -131,6 +131,26 @@ define RetargetWingAtCore
 	)
 endef
 
+# VerifyPatches asserts the end state the LuCI "ECH Tunnel" page depends on:
+# the node drop-in importer and the ech_tunnel fragment merge. The patchset
+# targets a pinned dae-wing revision, so a version bump can silently invalidate
+# it (stale context / stale module paths); checking symbols instead of patch
+# exit codes catches that at build time instead of shipping a tree where the
+# buttons write files nobody reads.
+define VerifyPatches
+	( \
+		set -e ; \
+		grep -q 'func SyncLocalSubscriptions' graphql/service/subscription/local.go ; \
+		grep -q 'SyncLocalSubscriptions(context.TODO())' cmd/run.go ; \
+		grep -q 'file://' graphql/service/subscription/mutation_utils.go ; \
+		grep -q 'ResolveSubscriptionAsPlaintext' dae-core/common/subscription/subscription.go ; \
+		grep -q 'func MergeEchTunnelFragments' dae/ech_tunnel_fragments.go ; \
+		grep -q 'MergeEchTunnelFragments' graphql/service/config/mutation_utils.go ; \
+		grep -q 'echtunnel.New()' dae/run.go ; \
+		grep -q 'func ParseEchTunnelSections' dae-core/config/ech_tunnel_fragment.go ; \
+	)
+endef
+
 # MergeCoreSums appends the core's go.sum entries into the wing module so
 # its dependency graph verifies without go mod tidy (tidy would pull test
 # dependencies the build never needs).
@@ -159,7 +179,9 @@ define Build/Prepare
 		pushd $(PKG_BUILD_DIR) ; \
 			$(call RetargetWingAtCore) ; \
 			patch --forward -p1 < $(CURDIR)/../patchset/build_fixes.patch || true ; \
-			patch --forward -p1 < $(CURDIR)/../patchset/feat-local-nodes-import.patch || true ; \
+			patch --forward -p1 < $(CURDIR)/../patchset/feat-local-nodes-import.patch ; \
+			$(call VerifyPatches) ; \
+			rm -f $$(find . -name '*.rej' -o -name '*.orig') ; \
 			$(call MergeCoreSums) ; \
 		popd ; \
 		mkdir -p $(DAED_BUILD_DIR)/.node_tmp/config ; \
