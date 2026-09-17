@@ -262,31 +262,34 @@ if content2 then
 	check(content2:find("echws://") == nil, "node link omitted")
 end
 
-print("== gist sync runfile ==")
+print("== gist sync runs the shared sync script ==")
+-- The dashboard build never reads *.dae subscriptions, so "Enable Gist Sync"
+-- must drive the same drop-in download the button uses, on a schedule.
 uci_store["gist"] = {
 	enabled = "1",
 	gist_id = "abc123def456",
 	token = "tok123",
 	gist_file = "nodes.json",
 	sub_tag = "ech_nodes",
-	persist = "1",
 }
+sys_calls = {}
 map_obj.on_after_apply(map_obj, nil)
-local gist_content = written_files["/etc/daed/ech_sub.dae"]
-check(gist_content ~= nil, "gist runfile written")
-if gist_content then
-	check(gist_content:find("subscription {", 1, true) ~= nil, "subscription section emitted")
-	check(gist_content:find("ech_nodes: 'gist%-file://tok123@abc123def456/nodes%.json'") ~= nil,
-		"gist-file URL with token and filename emitted")
-end
-
-print("== gist disabled removes the runfile ==")
-uci_store["gist"].enabled = "0"
-map_obj.on_after_apply(map_obj, nil)
-local gist_rm = false
+local sync_launched = false
 for _, c in ipairs(sys_calls) do
-	if c:find("ech_sub%.dae") and c:find("rm %-f") then gist_rm = true end
+	if c:find("daed%-gist%-sync") then sync_launched = true end
 end
+check(sync_launched, "apply triggers /usr/libexec/daed-gist-sync when enabled")
+check(written_files["/etc/daed/ech_sub.dae"] == nil, "no dead subscription runfile is written")
+
+print("== gist disabled does not launch the sync ==")
+uci_store["gist"].enabled = "0"
+sys_calls = {}
+map_obj.on_after_apply(map_obj, nil)
+local sync_again = false
+for _, c in ipairs(sys_calls) do
+	if c:find("daed%-gist%-sync") then sync_again = true end
+end
+check(not sync_again, "disabled gist sync launches nothing")
 -- also check via logger mock (sys.call recorded)
 print("== disabled removes the runfile ==")
 uci_store["ech"].enabled = "0"

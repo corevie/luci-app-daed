@@ -1,0 +1,64 @@
+#!/usr/bin/lua
+-- SPDX-License-Identifier: AGPL-3.0-only
+-- Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
+--
+-- Scheduled gist sync for luci-app-daed (run by /etc/init.d/luci_daed's cron
+-- entry when "Enable Gist Sync" is on).
+--
+-- It performs exactly the same fetch/validate/write as the LuCI
+-- "Download & Update Nodes" button -- both call luci.model.daed_gist.sync() --
+-- so the drop-in under /etc/daed/nodes.d stays in sync and the daemon imports
+-- it on the restart this script triggers when the payload changed.
+--
+-- Exit codes: 0 = synced (or nothing to do), 1 = failure (also sent to syslog).
+
+-- LuCI's CGI wrapper sets LUA_PATH; a standalone script must do it itself,
+-- otherwise "luci.model.uci" cannot be found on a stock OpenWrt install.
+package.path = "/usr/lib/lua/?.lua;/usr/lib/lua/?/init.lua;" .. package.path
+
+local function log(fmt, ...)
+	os.execute("logger -t luci-app-daed " .. string.format("%q", string.format(fmt, ...)))
+end
+
+local function bail(fmt, ...)
+	log(fmt, ...)
+	os.exit(1)
+end
+
+local ok, uci_mod = pcall(require, "luci.model.uci")
+if not ok then
+	bail("gist sync: cannot load luci.model.uci: %s", tostring(uci_mod))
+end
+local uci = uci_mod.cursor()
+
+local function cfg(option)
+	return uci:get("daed", "gist", option) or ""
+end
+
+-- Nothing to do while the feature is off or unconfigured (exit 0: not an error).
+if cfg("enabled") ~= "1" then
+	os.exit(0)
+end
+
+local gist_id = cfg("gist_id")
+if gist_id == "" then
+	os.exit(0)
+end
+
+local ok_share, M = pcall(require, "luci.model.daed_gist")
+if not ok_share then
+	bail("gist sync: cannot load luci.model.daed_gist: %s", tostring(M))
+end
+
+local result = M.sync({
+	gist_id = gist_id,
+	token = cfg("token"),
+	gist_file = cfg("gist_file"),
+	sub_tag = cfg("sub_tag"),
+})
+
+if not result.ok then
+	bail("gist sync failed: %s", tostring(result.error))
+end
+
+os.exit(0)

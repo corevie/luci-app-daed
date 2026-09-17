@@ -34,9 +34,6 @@ msgstr "日志文件保留数量"
 msgid "Logfile Max Size (MB)"
 msgstr "日志文件大小(MB)"
 
-msgid "Enable Auto Subscribe Update"
-msgstr "启用订阅自动更新"
-
 msgid "Update Cycle"
 msgstr "更新周期"
 
@@ -60,9 +57,6 @@ msgstr "通过 TLS 1.3 加密客户端问候（ECH）经 wss 隧道服务器中�
 
 msgid "ECH Tunnel Settings"
 msgstr "ECH 隧道设置"
-
-msgid "When enabled, the ech_tunnel runfile is generated and the daemon is restarted. Turning it off removes the runfile."
-msgstr "启用后将生成 ech_tunnel 运行文件并重启守护进程；关闭时会删除该文件。"
 
 msgid "Tunnel Server"
 msgstr "隧道服务器"
@@ -130,9 +124,6 @@ msgstr "在运行文件中额外写入一个 echws:// 节点和 \"ech_tunnel\" �
 msgid "Generated Runfile Path"
 msgstr "生成的运行文件路径"
 
-msgid "Path of the generated dae config fragment. Keep the default for daed (config directory mode), or set /etc/dae/config.d/ech_tunnel.dae for standalone dae with an include directive."
-msgstr "生成的 dae 配置片段路径。daed（配置目录模式）保持默认即可；独立 dae 配合 include 指令时请设为 /etc/dae/config.d/ech_tunnel.dae。"
-
 msgid "Runfile path is required"
 msgstr "必须填写运行文件路径"
 
@@ -196,14 +187,41 @@ msgstr "更新周期（星期）"
 msgid "Cron weekday: * = every day, 1-5 = Mon-Fri, 0/7 = Sunday."
 msgstr "Cron 星期：* = 每天，1-5 = 周一至周五，0/7 = 周日。"
 
-msgid "Periodically hot-reload dae so subscriptions (e.g. the ECH nodes gist) are re-fetched."
-msgstr "周期性热重载 dae，以便重新拉取订阅（例如 ECH 节点 gist）。"
+msgid "Periodically restart daed so subscriptions (e.g. the ECH nodes gist) are re-fetched."
+msgstr "周期性重启 daed，以便重新拉取订阅（例如 ECH 节点 gist）。"
+
+msgid "Connecting to the DAED dashboard…"
+msgstr "正在连接 DAED 仪表板…"
+
+msgid "Cannot determine the dashboard port. Set Dashboard Access Port in Base Setting."
+msgstr "无法确定仪表板端口。请在基础设置中填写 Dashboard Access Port。"
+
+msgid "Cannot reach the DAED dashboard."
+msgstr "无法访问 DAED 仪表板。"
+
+msgid "Check that the daemon is running and listens on this port."
+msgstr "请确认守护进程正在运行且监听该端口。"
+
+msgid "Log is empty"
+msgstr "日志为空"
+
+msgid "Failed to fetch logs"
+msgstr "读取日志失败"
+
+msgid "Log cleared"
+msgstr "日志已清空"
+
+msgid "Failed to clear log"
+msgstr "清空日志失败"
 
 msgid "Config Files"
 msgstr "配置文件"
 
 msgid "Edit the dae runfiles under /etc/daed/ (e.g. ECH tunnel fragments). The daemon restarts on save."
 msgstr "编辑 /etc/daed/ 下的 dae 运行文件（如 ECH 隧道片段）。保存后守护进程将重启。"
+
+msgid "Edit the dae runfiles under /etc/daed/ (e.g. ECH tunnel fragments). The daemon restarts on save. In the dashboard build, wing.db is authoritative for nodes/subscriptions/routing; these files are the ECH/gist bridge."
+msgstr "编辑 /etc/daed/ 下的 dae 运行文件（如 ECH 隧道片段）。保存后守护进程将重启。仪表板模式下 wing.db 是节点/订阅/路由的权威数据源；这些文件是 ECH/gist 桥接文件。"
 
 msgid "Save & Apply"
 msgstr "保存并应用"
@@ -213,9 +231,6 @@ msgstr "Gist 同步（cfMac nodes.json）"
 
 msgid "Enable Gist Sync"
 msgstr "启用 Gist 同步"
-
-msgid "Sync the cfMac nodes.json node library from a GitHub Gist as a dae subscription. Every node becomes an echws:// outbound (name, token, preferred IPs, ECH DoH are all mapped)."
-msgstr "把 GitHub Gist 中的 cfMac nodes.json 节点库同步为 dae 订阅。每个节点都会转换成 echws:// 出站（名称、令牌、优选 IP、ECH DoH 全部映射）。"
 
 msgid "Gist ID"
 msgstr "Gist ID"
@@ -232,9 +247,6 @@ msgstr "无效的 Gist ID"
 msgid "GitHub Token (for private gists)"
 msgstr "GitHub Token（私有 Gist 用）"
 
-msgid "Personal access token with the gist scope. Leave empty for public gists."
-msgstr "具有 gist 权限的个人访问令牌。公开 Gist 留空即可。"
-
 msgid "Gist Filename"
 msgstr "Gist 文件名"
 
@@ -244,17 +256,6 @@ msgstr "Gist 中的文件名。"
 msgid "Subscription Tag"
 msgstr "订阅标签"
 
-msgid "dae subscription tag. Reference it in groups via filter: subtag(<tag>), e.g. filter: subtag(ech_nodes)."
-msgstr "dae 订阅标签。在分组中通过 filter: subtag(<标签>) 引用，例如 filter: subtag(ech_nodes)。"
-
-msgid "Persist Last Fetch"
-msgstr "持久化最近一次拉取"
-
-msgid "Use gist-file:// so the last successful fetch is stored under /etc/dae/persist.d/ as an offline fallback."
-msgstr "使用 gist-file://，最近一次成功拉取的内容会存到 /etc/dae/persist.d/ 作为离线回退。"
-
-msgid "Path of the generated dae config fragment. The default lives in the runfiles directory of the standalone dae build (/etc/dae/config.d/, merged by the include directive in config.dae)."
-msgstr "生成的 dae 配置片段路径。默认位于独立版 dae 的运行文件目录（/etc/dae/config.d/，由 config.dae 的 include 指令合并）。"
 msgid "Download & Update Nodes"
 msgstr "下载并更新节点"
 
@@ -275,9 +276,6 @@ msgstr "下载失败"
 
 msgid "unknown error"
 msgstr "未知错误"
-
-msgid "Fetch the gist now, overwrite /etc/daed/nodes.d/<tag>.json and restart daed. Each entry becomes an echws:// node named after the \"name\" field, and the nodes appear in the dashboard's subscriptions and group list."
-msgstr "立即拉取 Gist，覆盖 /etc/daed/nodes.d/<标签>.json 并重启 daed。每个节点按 nodes.json 的 \"name\" 字段命名并转为 echws:// 节点，随后会出现在仪表盘的订阅与分组列表中。"
 
 msgid "Invalid subscription tag"
 msgstr "无效的订阅标签"
@@ -300,9 +298,6 @@ msgstr "gist 原始文件为空"
 msgid "The gist file has neither content nor a raw_url"
 msgstr "gist 文件既无内容也无 raw_url"
 
-msgid "Gist file %s contains no nodes"
-msgstr "Gist 文件 %s 中没有任何节点"
-
 msgid "Cannot write %s"
 msgstr "无法写入 %s"
 
@@ -311,3 +306,96 @@ msgstr "daed 正在重启，稍后即可在仪表盘中看到这些节点"
 
 msgid "daed is not running; the nodes will be imported on next start"
 msgstr "daed 未运行，节点将在下次启动时导入"
+
+msgid "Gist Sync"
+msgstr "Gist 同步"
+
+msgid "Invalid weekday, expected 0-7 with optional , - * / (e.g. * or 1,3,5)"
+msgstr "无效的星期值，应使用 0-7 及可选的 , - * /（例如 * 或 1,3,5）"
+
+msgid "Save failed"
+msgstr "保存失败"
+
+msgid "check the network and retry"
+msgstr "请检查网络后重试"
+
+msgid "Run the download below on a schedule: the gist is fetched into /etc/daed/nodes.d/<subscription tag>.json and daed is restarted, so the nodes stay in sync without clicking the button. Every node becomes an echws:// outbound (name, token, preferred IPs, ECH DoH are all mapped)."
+msgstr "按计划定时执行下方下载：Gist 内容拉取到 /etc/daed/nodes.d/<订阅标签>.json 并重启 daed，无需手动点击即可保持节点同步。每个节点都会转换为 echws:// 出站（名称、令牌、优选 IP、ECH DoH 全部映射）。"
+
+msgid "Name of the drop-in file (/etc/daed/nodes.d/<tag>.json). The daemon imports it as a subscription with this tag plus a group of the same name, so routing rules can reference the group (e.g. fallback: ech_nodes)."
+msgstr "投递文件名（/etc/daed/nodes.d/<标签>.json）。守护进程会将其导入为同名订阅并创建同名分组，路由规则可直接引用该分组（例如 fallback: ech_nodes）。"
+
+msgid "Personal access token with the gist scope. Leave empty for public gists. The token is stored in plaintext in /etc/config/daed; the fetched node links (which carry the tunnel token) are stored in /etc/daed/nodes.d/<tag>.json with mode 0600. Do not reuse a high-privilege token."
+msgstr "具有 gist 权限的个人访问令牌。公开 Gist 留空。该令牌以明文存于 /etc/config/daed；下载的节点链接（内含隧道令牌）存放于 /etc/daed/nodes.d/<标签>.json（权限 0600）。请勿复用高权限令牌。"
+
+msgid "Accepts cfMac nodes.json, SIP008, a base64 subscription or a link list — the same formats the daemon imports. Enabling Gist Sync runs the very same download on a schedule."
+msgstr "接受 cfMac nodes.json、SIP008、base64 订阅或链接列表——与守护进程支持的格式一致。启用「Gist 同步」会按相同方式定时下载。"
+
+msgid "The gist file is an HTML page, not a node library (check the Gist ID and token)"
+msgstr "该 Gist 文件是 HTML 页面而非节点库（请检查 Gist ID 与令牌）"
+
+msgid "Gist file %s is not a node library the daemon can import (cfMac nodes.json, SIP008, base64 or link list)"
+msgstr "Gist 文件 %s 不是守护进程可导入的节点库（需为 cfMac nodes.json、SIP008、base64 或链接列表）"
+
+msgid "daed restarts on the next scheduled update; the nodes appear then"
+msgstr "daed 将在下次计划更新时重启，届时节点会出现"
+
+msgid "Nodes are already up to date; daed was not restarted"
+msgstr "节点已是最新，未重启 daed"
+
+msgid "Node drop-ins"
+msgstr "节点投递文件"
+
+msgid "waiting for the daemon import"
+msgstr "等待守护进程导入"
+
+msgid "imported"
+msgstr "已导入"
+
+msgid "import failed"
+msgstr "导入失败"
+
+msgid "skipped"
+msgstr "已跳过"
+
+msgid "unusable file"
+msgstr "文件不可用"
+
+msgid "the tag is already used by another subscription"
+msgstr "该标签已被其它订阅占用"
+
+msgid "stale nodes kept because they are pinned to a group"
+msgstr "因被固定到分组而保留的旧节点"
+
+msgid "The daemon has not scanned the drop-ins yet; restart daed to import them."
+msgstr "守护进程尚未扫描投递文件；重启 daed 即可导入。"
+
+msgid "only the Download button runs"
+msgstr "仅在点击「下载」时执行"
+
+msgid "unchanged"
+msgstr "内容未变化"
+
+msgid "none"
+msgstr "无"
+
+msgid "Enable Subscription Auto Update"
+msgstr "启用订阅自动更新"
+
+msgid "Global Settings"
+msgstr "全局设置"
+
+msgid "Only for external port mapping / reverse proxy scenarios: the daemon itself does NOT listen on this port. Leave empty to use the port from listen address."
+msgstr "仅用于外网端口映射 / 反向代理场景：守护进程本身不监听该端口。留空则使用监听地址中的端口。"
+
+msgid "Fetch the gist now, overwrite /etc/daed/nodes.d/<tag>.json and restart daed. Each entry becomes an echws:// node named after the \"name\" field, and the nodes appear in the dashboard's subscriptions and group list."
+msgstr "立即拉取 Gist，覆盖 /etc/daed/nodes.d/<标签>.json 并重启 daed。每个节点按 nodes.json 的 \"name\" 字段命名并转为 echws:// 节点，随后会出现在仪表盘的订阅与分组列表中。"
+
+msgid "Path of the generated dae config fragment. The dashboard daemon merges the ech_tunnel section of every *.dae in /etc/daed on each config load, so keep the default (or any other path inside /etc/daed) for daed. A path outside /etc/daed (e.g. /etc/dae/config.d/ech_tunnel.dae) only takes effect in the standalone dae build, which reads it through an include directive."
+msgstr "生成的 dae 配置片段路径。仪表板守护进程每次加载配置时会合并 /etc/daed 下所有 *.dae 中的 ech_tunnel 段，因此 daed 请保持默认（或 /etc/daed 内的其他路径）。/etc/daed 之外的路径（例如 /etc/dae/config.d/ech_tunnel.dae）仅在独立版 dae 中生效（通过 include 指令读取）。"
+
+msgid "When enabled, the ech_tunnel runfile is generated and the daemon is restarted. Turning it off removes the runfile. The dashboard daemon merges the fragment's ech_tunnel section on every config load; the runfile path must stay inside /etc/daed for that to happen."
+msgstr "启用后将生成 ech_tunnel 运行文件并重启守护进程；关闭时会删除该文件。仪表板守护进程每次加载配置都会合并该片段中的 ech_tunnel 段，因此运行文件路径必须位于 /etc/daed 内。"
+
+msgid "outside /etc/daed — the daemon does not read this path (standalone dae only)"
+msgstr "不在 /etc/daed 内 —— 守护进程不会读取该路径（仅独立版 dae 生效）"

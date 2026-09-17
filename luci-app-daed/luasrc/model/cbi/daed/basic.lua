@@ -25,7 +25,7 @@ o.default = '0.0.0.0:2023'
 o = s:option(Value, "dashboard_port", translate("Dashboard Access Port"))
 o.placeholder = translate("Leave empty to use listen port")
 o.datatype = "range(1,65535)"
-o.description = translate("For reverse proxy scenarios, leave empty to use the port from listen address")
+o.description = translate("Only for external port mapping / reverse proxy scenarios: the daemon itself does NOT listen on this port. Leave empty to use the port from listen address.")
 
 o = s:option(Flag, "subscribe_auto_update", translate("Enable Subscription Auto Update"))
 o.default = 0
@@ -40,9 +40,20 @@ o.rmempty = false
 o = s:option(Value, "subscribe_update_week_time", translate("Update Cycle (Weekday)"))
 o.default = "*"
 o.rmempty = false
+function o.validate(self, value, section)
+	if value == nil or value == "" then
+		return "*"
+	end
+	-- Cron weekday field: digits 0-7, lists, ranges and steps only.
+	if not value:match("^[0-7%*,%-/]+$") then
+		return nil, translate("Invalid weekday, expected 0-7 with optional , - * / (e.g. * or 1,3,5)")
+	end
+	return value
+end
 
 m.apply_on_parse = true
 m.on_after_apply = function(self,map)
+	luci.sys.exec("/etc/init.d/luci_daed restart >/dev/null 2>&1")
 	luci.sys.exec("/etc/init.d/daed restart")
 end
 

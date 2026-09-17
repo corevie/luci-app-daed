@@ -1,27 +1,52 @@
+<style>
+	.daed-ok { color: #2e7d32; }
+	.daed-bad { color: #c62828; }
+	.daed-muted { color: #808080; }
+	@media (prefers-color-scheme: dark) {
+		.daed-ok { color: #81c784; }
+		.daed-bad { color: #ef9a9a; }
+		.daed-muted { color: #aaa; }
+	}
+</style>
 <script type="text/javascript">
 	//<![CDATA[
+	function set_log_state(cls, msg) {
+		var el = document.getElementById('log_state');
+		if (el) { el.className = cls; el.textContent = msg; }
+	}
+
 	function clear_log(btn) {
 		XHR.get('<%=url([[admin]], [[services]], [[daed]], [[clear_log]])%>', null,
 			function(x, data) {
-				if(x && x.status == 200) {
+				if (x && x.status == 200) {
 					var log_textarea = document.getElementById('log_textarea');
 					log_textarea.innerHTML = "";
 					log_textarea.scrollTop = log_textarea.scrollHeight;
+					set_log_state('daed-muted', '<%:Log cleared%>');
+				} else {
+					set_log_state('daed-bad', '<%:Failed to clear log%>');
 				}
-				location.reload();
 			}
 		);
 	}
 	var scrolled = false;
 	XHR.poll(2, '<%=url([[admin]], [[services]], [[daed]], [[get_log]])%>', null,
 		function(x, data) {
-			if(x && x.status == 200) {
+			if (x && x.status == 200) {
 				var log_textarea = document.getElementById('log_textarea');
-				log_textarea.innerHTML = x.responseText;
+				var text = x.responseText || '';
+				log_textarea.innerHTML = text;
+				if (text.trim() === '') {
+					set_log_state('daed-muted', '<%:Log is empty%>');
+				} else {
+					set_log_state('', '');
+				}
 				if (!scrolled) {
 					log_textarea.scrollTop = log_textarea.scrollHeight;
 					scrolled = true;
 				}
+			} else {
+				set_log_state('daed-bad', '<%:Failed to fetch logs%>');
 			}
 		}
 	);
@@ -29,5 +54,6 @@
 </script>
 <fieldset class="cbi-section" id="_log_fieldset">
 	<input class="cbi-button cbi-input-remove" type="button" onclick="clear_log()" value="<%:Clear logs%>" style="margin-left: 10px; margin-top: 10px;">
-	<textarea id="log_textarea" class="cbi-input-textarea" style="width: calc(100% - 20px); height: 645px; margin: 10px;" data-update="change" rows="5" wrap="off" readonly="readonly"></textarea>
+	<span id="log_state" class="daed-muted" style="margin-left: 10px;"></span>
+	<textarea id="log_textarea" class="cbi-input-textarea" style="width: calc(100% - 20px); height: 60vh; min-height: 360px; margin: 10px;" data-update="change" rows="5" wrap="off" readonly="readonly"></textarea>
 </fieldset>

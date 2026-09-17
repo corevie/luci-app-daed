@@ -1,22 +1,30 @@
 <script type="text/javascript">//<![CDATA[
-	XHR.poll(3, '<%=url([[admin]], [[services]], [[daed_status]])%>', null,
+	XHR.poll(3, '<%=url([[admin]], [[services]], [[daed]], [[status]])%>', null,
 		function(x, data) {
 			var tb = document.getElementById('daed_status');
 			if (data && tb)
 			{
 				if (data.running)
 				{
-					tb.innerHTML = '<em><b style=\"color:green\"><%:DAED%> <%:RUNNING%></b></em>';
+					tb.innerHTML = '<em><b class="daed-ok"><%:DAED%> <%:RUNNING%></b></em>';
 				}
 				else
 				{
-					tb.innerHTML = '<em><b style=\"color:red\"><%:DAED%> <%:NOT RUNNING%></b></em>';
+					tb.innerHTML = '<em><b class="daed-bad"><%:DAED%> <%:NOT RUNNING%></b></em>';
 				}
 			}
 		}
 	);
 //]]></script>
-<style>.mar-10 {margin-left: 50px; margin-right: 10px;}</style>
+<style>
+	.daed-ok { color: #2e7d32; }
+	.daed-bad { color: #c62828; }
+	.mar-10 { margin: 8px 12px; }
+	@media (prefers-color-scheme: dark) {
+		.daed-ok { color: #81c784; }
+		.daed-bad { color: #ef9a9a; }
+	}
+</style>
 <fieldset class="cbi-section">
 	<p id="daed_status">
 		<em><%:Collecting data...%></em>

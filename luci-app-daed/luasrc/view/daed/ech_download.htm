@@ -8,14 +8,25 @@
 	the nodes (named after nodes.json's "name" field) and exposes them in the
 	dashboard's subscription/node lists.
 -%>
+<style>
+	.daed-ok { color: #2e7d32; }
+	.daed-bad { color: #c62828; }
+	.daed-muted { color: #808080; }
+	@media (prefers-color-scheme: dark) {
+		.daed-ok { color: #81c784; }
+		.daed-bad { color: #ef9a9a; }
+		.daed-muted { color: #aaa; }
+	}
+</style>
 <div class="cbi-value">
 	<label class="cbi-value-title"><%:Download &amp; Update Nodes%></label>
 	<div class="cbi-value-field">
 		<input type="button" class="cbi-button cbi-button-apply"
 			value="<%:Download%>" onclick="ech_download_nodes(this)" />
-		<span id="ech_download_result" style="margin-left:10px"></span>
+		<span id="ech_download_result" class="daed-muted" style="margin-left:8px"></span>
 		<div class="cbi-value-description">
 			<%:Fetch the gist now, overwrite /etc/daed/nodes.d/<tag>.json and restart daed. Each entry becomes an echws:// node named after the "name" field, and the nodes appear in the dashboard's subscriptions and group list.%>
+			<%:Accepts cfMac nodes.json, SIP008, a base64 subscription or a link list — the same formats the daemon imports. Enabling Gist Sync runs the very same download on a schedule.%>
 		</div>
 	</div>
 </div>
@@ -28,7 +39,7 @@
 	function ech_download_nodes(btn) {
 		var out = document.getElementById('ech_download_result');
 		btn.disabled = true;
-		out.style.color = '';
+		out.className = '';
 		out.textContent = '<%:Downloading...%>';
 
 		var fd = new FormData();
@@ -41,19 +52,23 @@
 			method: 'POST',
 			body: fd,
 			headers: { 'X-Requested-With': 'XMLHttpRequest' }
-		}).then(function (r) { return r.json(); }).then(function (data) {
+		}).then(function (r) {
+			if (!r.ok) { throw new Error('HTTP ' + r.status); }
+			return r.json();
+		}).then(function (data) {
 			if (data && data.ok) {
 				var names = (data.names || []).join(', ');
-				out.style.color = 'green';
+				out.className = 'daed-ok';
 				out.textContent = '<%:Downloaded%> ' + data.count + ' <%:nodes%>'
-					+ (names ? ' (' + names + (data.count > names.split(', ').length ? ' ...' : '') + ')' : '')
+					+ (names ? ' (' + names + (data.count > (data.names || []).length ? ' ...' : '') + ')' : '')
+					+ ' [' + data.kind + (data.changed === false ? ', <%:unchanged%>' : '') + ']'
 					+ ' -> ' + data.file + '. ' + (data.note || '');
 			} else {
-				out.style.color = 'red';
+				out.className = 'daed-bad';
 				out.textContent = '<%:Download failed%>: ' + ((data && data.error) || '<%:unknown error%>');
 			}
 		}).catch(function (e) {
-			out.style.color = 'red';
+			out.className = 'daed-bad';
 			out.textContent = '<%:Download failed%>: ' + e;
 		}).then(function () {
 			btn.disabled = false;

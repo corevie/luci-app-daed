@@ -1,21 +1,24 @@
 <%+header%>
 <%
-	local running = luci.sys.exec("pgrep -x /usr/bin/daed")
+	local running = luci.sys.call("pidof daed >/dev/null") == 0
 %>
-<% if tonumber(running) ~= nil then %>
+<% if running then %>
 	<div class="cbi-map">
-		<iframe id="daed" class="daed-iframe"></iframe>
+		<div id="daed-loading" class="daed-state" role="status"><%:Connecting to the DAED dashboard…%></div>
+		<iframe id="daed" class="daed-iframe" style="display:none"></iframe>
+		<div id="daed-error" class="daed-state daed-error" style="display:none"></div>
 	</div>
 	<style>
 	.daed-iframe {
 		width: 100%;
-		height: 100vh;
-		min-height: 780px;
+		height: calc(100vh - 130px);
+		min-height: 480px;
 		border: none;
-		border-radius: .375rem;
-		box-shadow: rgba(0, 0, 0, 0.75) 0px 0px 15px -5px;
 		display: block;
 	}
+	.daed-state { text-align: center; padding: 60px 20px; color: #888; }
+	.daed-error { color: #b00020; }
+	@media (prefers-color-scheme: dark) { .daed-error { color: #ff8a80; } }
 	</style>
 	<script type="text/javascript">
 		var listenAddr = "<%=luci.model.uci.cursor():get_first("daed", "daed", "listen_addr") or ''%>";
@@ -32,16 +35,38 @@
 			}
 		}
 
-		if (port) {
+		var loading = document.getElementById("daed-loading");
+		var errorBox = document.getElementById("daed-error");
+		var iframe = document.getElementById("daed");
+
+		function showError(msg) {
+			loading.style.display = "none";
+			iframe.style.display = "none";
+			errorBox.style.display = "block";
+			errorBox.textContent = msg;
+		}
+
+		if (!port) {
+			showError("<%:Cannot determine the dashboard port. Set Dashboard Access Port in Base Setting.%>");
+		} else {
 			var protocol = window.location.protocol;
 			var hostname = window.location.hostname;
 			var url = protocol + "//" + hostname;
-
 			if (!((protocol === "http:" && port === "80") || (protocol === "https:" && port === "443"))) {
 				url += ":" + port;
 			}
-
-			document.getElementById("daed").src = url;
+			iframe.onload = function() {
+				loading.style.display = "none";
+				errorBox.style.display = "none";
+				iframe.style.display = "block";
+				iframe.setAttribute("data-loaded", "1");
+			};
+			setTimeout(function() {
+				if (iframe.getAttribute("data-loaded") !== "1") {
+					showError("<%:Cannot reach the DAED dashboard.%> " + url + " <%:Check that the daemon is running and listens on this port.%>");
+				}
+			}, 10000);
+			iframe.src = url;
 		}
 	</script>
 <% else %>
@@ -50,6 +75,10 @@
 	.notrunning svg { width: 90px; height: 90px; opacity: .8; }
 	.notrunning h1 { font-size: 25px; color: #333; margin: 16px 0; }
 	.notrunning p { font-size: 18px; color: #666; margin-bottom: 24px; }
+	@media (prefers-color-scheme: dark) {
+		.notrunning h1 { color: #ccc; }
+		.notrunning p { color: #aaa; }
+	}
 	</style>
 	<div class="notrunning">
 		<svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

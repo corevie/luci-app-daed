@@ -3,7 +3,8 @@
 	Copyright (c) 2022-2026, daeuniverse Organization <dae@v2raya.org>
 
 	ECH tunnel status: shows the runfile state and whether the local proxy
-	port is actually listening (polled via the ech_status RPC).
+	port is actually listening (polled via the ech_status RPC), plus the gist
+	sync drop-ins and what the daemon did with each of them.
 -%>
 <script type="text/javascript">//<![CDATA[
 	XHR.poll(5, '<%=url([[admin]], [[services]], [[daed]], [[ech_status]])%>', null,
@@ -13,33 +14,89 @@
 			{
 				var html = '';
 				if (data.enabled) {
-					html += '<em><b style="color:green"><%:ECH Tunnel%>: <%:ENABLED%></b></em><br />';
+					html += '<em><b class="daed-ok"><%:ECH Tunnel%>: <%:ENABLED%></b></em><br />';
 					html += '<%:Local proxy%>: <b>' + data.listen + '</b> — ';
 					if (data.listening) {
-						html += '<b style="color:green"><%:LISTENING%></b>';
+						html += '<b class="daed-ok"><%:LISTENING%></b>';
 					} else {
-						html += '<b style="color:red"><%:NOT LISTENING%></b>';
+						html += '<b class="daed-bad"><%:NOT LISTENING%></b>';
 					}
 					html += '<br /><%:Runfile%>: <b>' + data.config_file + '</b> — ';
 					if (data.generated) {
-						html += '<b style="color:green"><%:GENERATED%></b>';
+						html += '<b class="daed-ok"><%:GENERATED%></b>';
 					} else {
-						html += '<b style="color:red"><%:MISSING%></b>';
+						html += '<b class="daed-bad"><%:MISSING%></b>';
 					}
-					if (data.daed_running) {
-						html += '<br /><%:Daemon%>: <%:RUNNING%>';
-					} else {
-						html += '<br /><%:Daemon%>: <b style="color:red"><%:NOT RUNNING%></b>';
+					if (data.scanned === false) {
+						html += ' <b class="daed-bad"><%:outside /etc/daed — the daemon does not read this path (standalone dae only)%></b>';
 					}
 				} else {
-					html = '<em><b style="color:#808080"><%:ECH Tunnel%>: <%:DISABLED%></b></em>';
+					html = '<em><b class="daed-muted"><%:ECH Tunnel%>: <%:DISABLED%></b></em>';
+				}
+
+				if (data.gist) {
+					html += '<br /><%:Gist Sync%> (' + data.gist.tag + '): ';
+					if (data.gist.enabled) {
+						html += '<b class="daed-ok"><%:ENABLED%></b>';
+					} else {
+						html += '<b class="daed-muted"><%:DISABLED%></b> (<%:only the Download button runs%>)';
+					}
+					html += '<br /><%:Node drop-ins%>: ';
+					if (!data.gist.dropins || data.gist.dropins.length === 0) {
+						html += '<b class="daed-muted"><%:none%></b>';
+					} else {
+						html += '<ul style="margin:4px 0 0 20px;padding:0">';
+						for (var i = 0; i < data.gist.dropins.length; i++) {
+							var d = data.gist.dropins[i];
+							html += '<li><b>' + d.tag + '</b> (' + d.file + ') — ';
+							if (d.pending) {
+								html += '<b class="daed-muted"><%:waiting for the daemon import%></b>';
+							} else if (d.status === 'imported') {
+								html += '<b class="daed-ok"><%:imported%></b> '
+									+ d.nodes + ' <%:nodes%>';
+							} else if (d.status === 'skipped') {
+								html += '<b class="daed-bad"><%:skipped%></b>: '
+									+ (d.error || '<%:the tag is already used by another subscription%>');
+							} else if (d.status === 'invalid') {
+								html += '<b class="daed-bad"><%:unusable file%></b>: ' + (d.error || '');
+							} else {
+								html += '<b class="daed-bad"><%:import failed%></b>: ' + (d.error || '');
+							}
+							if (d.retained > 0) {
+								html += ' — <b class="daed-bad">'
+									+ '<%:stale nodes kept because they are pinned to a group%>'
+									+ ': ' + d.retained + '</b>';
+							}
+							html += '</li>';
+						}
+						html += '</ul>';
+					}
+					if (!data.gist.report_at) {
+						html += '<%:The daemon has not scanned the drop-ins yet; restart daed to import them.%>';
+					}
+				}
+
+				if (data.daed_running) {
+					html += '<br /><%:Daemon%>: <%:RUNNING%>';
+				} else {
+					html += '<br /><%:Daemon%>: <b class="daed-bad"><%:NOT RUNNING%></b>';
 				}
 				tb.innerHTML = html;
 			}
 		}
 	);
 //]]></script>
-<style>.mar-10 {margin-left: 50px; margin-right: 10px;}</style>
+<style>
+	.daed-ok { color: #2e7d32; }
+	.daed-bad { color: #c62828; }
+	.daed-muted { color: #808080; }
+	.mar-10 { margin: 8px 12px; }
+	@media (prefers-color-scheme: dark) {
+		.daed-ok { color: #81c784; }
+		.daed-bad { color: #ef9a9a; }
+		.daed-muted { color: #aaa; }
+	}
+</style>
 <fieldset class="cbi-section">
 	<p id="ech_status">
 		<em><%:Collecting data...%></em>

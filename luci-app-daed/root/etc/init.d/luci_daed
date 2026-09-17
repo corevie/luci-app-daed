@@ -48,17 +48,37 @@ update_cron() {
   local temp_cron="/tmp/root.cron"
 
   if [ -f /etc/crontabs/root ]; then
-    grep -v '/etc/init.d/daed restart' /etc/crontabs/root > "$temp_cron" 2>/dev/null
+    grep -v '/etc/init.d/daed restart' /etc/crontabs/root 2>/dev/null \
+      | grep -v 'daed-gist-sync' > "$temp_cron"
   fi
   : >> "$temp_cron"
 
-  local auto_update
+  local auto_update gist_sync
   auto_update=$(uci -q get daed.config.subscribe_auto_update)
-  if [ "$1" = "add" ] && [ "${auto_update:-0}" -eq 1 ]; then
+  gist_sync=$(uci -q get daed.gist.enabled)
+  local gist_id
+  gist_id=$(uci -q get daed.gist.gist_id)
+
+  # Sanitize cron fields: anything outside the safe character set or an
+  # out-of-range value falls back to '*' so a malformed UCI value cannot
+  # corrupt (or inject into) the crontab.
+  local hr wk
+  hr=$(uci -q get daed.config.subscribe_update_day_time)
+  wk=$(uci -q get daed.config.subscribe_update_week_time)
+  case "$hr" in *[!0-9]*|"") hr='*' ;; esac
+  [ "$hr" != "*" ] && [ "$hr" -gt 23 ] 2>/dev/null && hr='*'
+  case "$wk" in *[!0-7*,/-]*|"") wk='*' ;; esac
+
+  if [ "$1" = "add" ]; then
     local min=$((RANDOM % 60))
-    local hr=$(uci -q get daed.config.subscribe_update_day_time)
-    local wk=$(uci -q get daed.config.subscribe_update_week_time)
-    echo "$min ${hr:-*} * * ${wk:-*} /etc/init.d/daed restart >/dev/null 2>&1" >> "$temp_cron"
+    if [ "${auto_update:-0}" -eq 1 ]; then
+      echo "$min $hr * * $wk /etc/init.d/daed restart >/dev/null 2>&1" >> "$temp_cron"
+    fi
+    # Gist sync: the script writes nodes.d/<tag>.json and restarts daed
+    # itself when the payload changed.
+    if [ "${gist_sync:-0}" -eq 1 ] && [ -n "$gist_id" ]; then
+      echo "$min $hr * * $wk /usr/libexec/daed-gist-sync >/dev/null 2>&1" >> "$temp_cron"
+    fi
   fi
 
   crontab "$temp_cron" 2>/dev/null

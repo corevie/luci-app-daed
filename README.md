@@ -127,55 +127,56 @@ dae-2.0.0 中集成的 ech-workers 隧道客户端（TLS 1.3 Encrypted Client He
 - 校验：服务器/监听地址必须是 `host:port[/path]` 格式（IPv6 需括号），
   端口范围 1-65535，IP 必须合法，运行文件路径必须为绝对路径。
 
-### Gist 同步（cfMac nodes.json 订阅）
+### Gist 同步（cfMac nodes.json）
 
-ECH 页面新增 **Gist Sync** 区，把 GitHub Gist 上的 cfMac `nodes.json`
-节点库作为 dae 订阅自动同步：
+ECH 页面的 **Gist Sync** 区把 GitHub Gist 上的 cfMac `nodes.json` 节点库
+导入到守护进程的节点列表。**仪表板构建（本包）不读取 `*.dae` 订阅**，所以
+同步走的是守护进程启动时扫描的投递目录 `/etc/daed/nodes.d/`：
 
 1. 填写 **Gist ID**（私有 Gist 再填 **GitHub Token**，需 gist 权限）、
-   **文件名**（默认 nodes.json）与**订阅标签**（默认 ech_nodes）；
-2. 勾选 **持久化最近一次拉取** 会使用 `gist-file://`，最近一次成功拉取
-   存到 `/etc/dae/persist.d/` 作为离线回退；
-3. 保存后生成 `/etc/daed/ech_sub.dae`：
-
-```
-subscription {
-    ech_nodes: 'gist-file://<token>@<gistID>/nodes.json'
-}
-```
-
-4. **仪表板模式**（本包）：把生成的 `echws://` 节点链接或 `gist://`
-   订阅 URL 粘贴到 daed 面板的节点/订阅管理（内核已支持识别）；
-   **独立 runfiles 模式**：在分组里引用 `filter: subtag(ech_nodes)`，路由
-   规则即可使用这些节点（例如 `fallback: proxy`）；
-5. 基础设置页开启**订阅自动更新**后，cron 会定时 `hot_reload` 重新拉取
-   Gist（dae 热重载，不断连接）。
+   **文件名**（默认 `nodes.json`）与**订阅标签**（默认 `ech_nodes`，即投递
+   文件名）；
+2. 勾选 **启用 Gist 同步** 后，`/etc/init.d/luci_daed` 会写入一条 cron：
+   按**基础设置**页的更新时间/周期执行 `/usr/libexec/daed-gist-sync`；
+3. 该脚本与页面上的**下载**按钮调用**同一份代码**
+   （`luci.model.daed_gist`）：拉取 Gist → 校验 → 原子写入
+   `/etc/daed/nodes.d/<标签>.json`（权限 600）→ 内容变化时重启 daed；
+4. 守护进程下次启动时导入投递文件（见下节）。
 
 ### 一键下载节点（Download & Update Nodes）
 
-Gist Sync 区新增 **下载** 按钮，点击后：
+**下载** 按钮立即执行一次上述流程：
 
-1. 用表单里的 Gist ID / 令牌 / 文件名即时拉取 gist（`api.github.com`，私有
+1. 用表单里的 Gist ID / 令牌 / 文件名即时拉取 Gist（`api.github.com`，私有
    Gist 带 `Authorization: Bearer`；大文件回退 `raw_url`）；
-2. 校验内容确实是 cfMac nodes.json（统计节点数并回显前 5 个名称）；
-3. **覆盖**写入运行文件 `/etc/daed/nodes.d/&lt;订阅标签&gt;.json`（权限 600）；
+2. 校验内容并识别格式：**cfMac nodes.json**、**SIP008**、**base64 订阅**或
+   **链接列表**——与守护进程支持的格式一致（HTML 页面、GitHub 错误 JSON 等
+   会被拒绝，避免覆盖已有节点）；
+3. **覆盖**写入 `/etc/daed/nodes.d/<标签>.json`（先写 `.tmp` 再 `mv`，守护
+   进程不会读到半截文件；权限 600）；内容与现有文件一致时**不重启** daed；
 4. 重启 daed —— 守护进程启动时扫描该目录（dae-wing 已打补丁支持）：
 
    - 每个 `<tag>.json` / `<tag>.txt` 变成一个**订阅**（标签 = 文件名）；
-   - 内容按 cfMac nodes.json 解析（`.txt` 则按链接列表解析），每个条目转成
-     一个 `echws://` 节点，**节点名取自 nodes.json 的 `name` 字段**；
+   - 内容按 cfMac nodes.json / SIP008 / base64 / 明文链接列表解析，每个条目
+     转成一个 `echws://` 节点，**节点名取自 nodes.json 的 `name` 字段**；
    - 同名**分组**自动创建（`min_moving_avg` 策略）并绑定该订阅；
    - 之后在 daed 面板的 **订阅 / 节点 / 分组** 列表里即可看到这些节点，
      在路由配置里引用该分组（如 `fallback: ech_nodes`）即可供服务使用。
 
-已验证链路（真实 `cfMac/nodes.json`，246 个节点）：
+按钮会即时反馈结果（成功：格式、节点数与名称预览、是否变化；失败：具体原因）。
 
-```
-nodes.json → 246 条 echws:// 链接 → db.Node{name="台湾-联通-0a49wo45@qabq.com"} ✓ NAME-MATCH 5/5
-```
+**导入结果回授**：守护进程每次启动会把每个投递文件的处理结果写入
+`/tmp/daed-nodes-sync.json`，ECH 页面的状态面板据此显示：
 
-按钮会即时反馈结果（成功：节点数与名称预览；失败：具体原因，如令牌错误、
-文件不存在、无节点）。下拉/新增节点无需手工粘贴链接。
+| 状态 | 含义 |
+|---|---|
+| 等待守护进程导入 | 文件已写入，daed 尚未重启扫描 |
+| 已导入 N 个节点 | 订阅建立成功 |
+| 已跳过 | 该标签已被另一个订阅占用（守护进程不会抢占，也不导入） |
+| 文件不可用 / 导入失败 | 标签非法或解析失败，附原因 |
+| 保留 M 个旧节点 | 这些节点已不在源里，但因被手工固定到分组而保留 |
+
+面板同时列出所有投递文件（不只当前标签），因此改了标签但没保存也不会看错。
 
 **字段映射**（cfMac 节点 → echws:// 出站）：
 
@@ -192,8 +193,9 @@ nodes.json → 246 条 echws:// 链接 → db.Node{name="台湾-联通-0a49wo45@
 多 IP 采用**随机起点轮询**：每条连接从随机偏移的候选开始，重试自动
 切换到下一个，配合 dae 的 `min_moving_avg` 策略实现节点内故障转移。
 
-也支持直接在配置里手写（无需 UI）：见 `config.d/node.dae` 头部注释的
-`gist://`、`gist-file://`、`file://nodes.json` 示例。
+也支持直接手写投递文件（无需 UI）：在 `/etc/daed/nodes.d/` 放
+`<标签>.json`（cfMac nodes.json）或 `<标签>.txt`（每行一个链接，`#` 开头为
+注释），重启 daed 即可。
 
 ### 维护提示（与本页面相关的仓库约束）
 
@@ -201,8 +203,38 @@ nodes.json → 246 条 echws:// 链接 → db.Node{name="台湾-联通-0a49wo45@
   行——请勿改动该文件前 17 行的行数。
 - `/etc/init.d/luci_daed`（START=98）负责 geo 资源环境注入
   （`DAE_LOCATION_ASSET=/usr/share/v2ray`）与 resolv.conf 隔离；订阅
-  定时更新 cron 由 `/etc/init.d/dae` 自行维护（`hot_reload`）。
+  定时更新 cron 由 `/etc/init.d/luci_daed` 维护（`daed restart`）。
 - ECH 页面的 UCI 存于新段 `config ech 'ech'`，与 `basic.lua` 的
-  `config daed 'config'` 互不干扰；ACL 已覆盖整个 `daed` UCI 配置，无需
-  额外授权。
-
+  `config daed 'config'` 互不干扰；rpcd ACL 覆盖整个 `daed` UCI 配置。
+  文件编辑器与 gist 下载只能写白名单路径（`/etc/daed` 下的 `.dae` 与
+  `/etc/daed/nodes.d/<tag>.json`）。
+- **主机侧测试**：`test_controller.lua`、`test_ech_download.lua`、
+  `test_ech_lua.lua`、`test_gist_sync_script.lua`、`test_paths_contract.lua`、
+  `test_luci_daed_cron.sh` 全部可在开发机上运行（`lua <file>` /
+  `sh <file>`），共用 `test_support.lua` 里的真实 JSON 解析器。
+  `test_paths_contract.lua` 专门盯住跨语言约定（投递目录、报告路径、
+  脚本路径），这类漂移正是此前功能静默失效的原因。
+- **数据源说明**：仪表板模式下 wing.db 是节点/订阅/路由的权威数据源。
+  daemon 以空配置启动核心、随后由 DB 生成配置（`dae.ParseConfig` 只拼接
+  `global`/`dns`/`routing` 三段），因此 runfile 里的
+  `global`/`routing`/`subscription` 等段**不会**进入核心配置：
+  - 节点/订阅走 `nodes.d/` 投递（见上）；
+  - `ech_tunnel` 段**例外**：daemon 每次加载配置时会合并 `/etc/daed/*.dae`
+    中的该段（补丁 `MergeEchTunnelFragments`），因此 ECH 隧道页生成的
+    `ech_tunnel.dae` 在仪表板构建中同样生效。只读取 `ech_tunnel` 一段，
+    片段里若混入 `global`/`routing` 不会覆盖仪表板；片段被组/其他用户可写
+    （权限 & 0037）时拒绝加载并在日志中说明。**运行文件路径必须位于
+    `/etc/daed/` 内**，否则只有独立 dae 构建会读取（状态面板会给出提示）。
+- **补丁漂移防护**：`patchset/` 针对 Makefile 中固定的 dae-wing 版本，
+  构建时会用 `VerifyLocalNodesPatch` 校验补丁后的关键符号，补丁失配即
+  **中止构建**（此前用 `|| true` 会静默产出没有导入功能的固件）。
+  `patchset/tests/` 下是投递导入与 ech_tunnel 片段的行为测试
+  （`wing-local-nodes_test.go`、`wing-ech-tunnel-fragments_test.go`），
+  升级 wing 后请按文件头注释运行一遍。
+- **本地节点清理**：daemon 启动时会清除 `nodes.d/` 中已不存在的文件对应的
+  订阅与自动创建的分组，避免 Dashboard 出现僵尸订阅。
+- **日志路径**：Logs 页读取 `/var/log/daed/daed.log`，与 `/etc/init.d/daed`
+  的 `--logfile` 保持一致。
+- **Token 安全**：Gist Token 以明文存在于 `/etc/config/daed`；拉取到的节点
+  链接（内含隧道令牌）存于 `/etc/daed/nodes.d/<tag>.json`（权限 600）。
+  请使用低权限、仅限 gist 的 Token。
