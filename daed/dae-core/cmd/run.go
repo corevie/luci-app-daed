@@ -35,6 +35,7 @@ import (
 	"github.com/corevie/dae/common/netutils"
 	"github.com/corevie/dae/common/subscription"
 	"github.com/corevie/dae/component/daedns"
+	"github.com/corevie/dae/component/echtunnel"
 	outbounddialer "github.com/corevie/dae/component/outbound/dialer"
 	"github.com/corevie/dae/config"
 	"github.com/corevie/dae/control"
@@ -340,8 +341,8 @@ func (r *Runner) Run() (err error) {
 	}
 
 	// Standalone ECH websocket tunnel (ech_tunnel section), if configured.
-	echTunnel := newEchTunnelController()
-	echTunnel.refresh(log, &conf.Global, conf.EchTunnel)
+	echTunnel := echtunnel.New()
+	echTunnel.Refresh(log, &conf.Global, conf.EchTunnel)
 
 	// Serve tproxy TCP/UDP server util signals.
 	var listener *control.Listener
@@ -526,7 +527,7 @@ func (r *Runner) Run() (err error) {
 					hasOverlap:       hasOverlap,
 				}, reloadStartedAt, reloadStartedAtMono)
 				reloadManager.beginHandoff()
-				echTunnel.refresh(log, &newConf.Global, newConf.EchTunnel)
+				echTunnel.Refresh(log, &newConf.Global, newConf.EchTunnel)
 				notifyRunStateChange(runStateChanges)
 				continue
 			}
@@ -657,7 +658,7 @@ func (r *Runner) Run() (err error) {
 			}
 
 			reloadManager.refreshPprofServer(log, &pprofServer, newConf.Global.PprofPort)
-			echTunnel.refresh(log, &newConf.Global, newConf.EchTunnel)
+			echTunnel.Refresh(log, &newConf.Global, newConf.EchTunnel)
 
 			notifyRunStateChange(runStateChanges)
 
@@ -851,7 +852,7 @@ loop:
 			_ = pprofServer.Shutdown(ctx)
 			cancel()
 		}
-		echTunnel.stop(log)
+		echTunnel.Stop(log)
 		_ = os.Remove(PidFilePath)
 	}()
 

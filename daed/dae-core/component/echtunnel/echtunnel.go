@@ -6,9 +6,13 @@
  * standalone ech-workers tunnel client with its local SOCKS5/HTTP proxy
  * server. The controller survives reload generations and restarts the
  * server only when the relevant config actually changes.
+ *
+ * It lives in component/ (not cmd/) because both daemon flavours need it:
+ * the standalone daemon runs the core's own run loop, and the dashboard
+ * build (dae-wing) drives the same core over its config channel.
  */
 
-package cmd
+package echtunnel
 
 import (
 	"context"
@@ -24,16 +28,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// echTunnelController owns the ech-workers standalone tunnel server.
-type echTunnelController struct {
+// Controller owns the ech-workers standalone tunnel server.
+type Controller struct {
 	mu     sync.Mutex
 	client *echworkers.Client
 	conf   *config.EchTunnel
 	cancel context.CancelFunc
 }
 
-func newEchTunnelController() *echTunnelController {
-	return &echTunnelController{}
+func New() *Controller {
+	return &Controller{}
 }
 
 // markedDirectDialer routes ech-workers connections through dae's direct
@@ -59,12 +63,12 @@ func newMarkedDirectDialer(global *config.Global) *markedDirectDialer {
 	}
 }
 
-// refresh reconciles the running tunnel server with the wanted config:
+// Refresh reconciles the running tunnel server with the wanted config:
 //   - nil section or empty listen stops the server;
 //   - a changed (or previously failed) section restarts it;
 //   - an identical, healthy section is left untouched so reloads do not
 //     needlessly re-bootstrap the ECH config.
-func (c *echTunnelController) refresh(log *logrus.Logger, global *config.Global, want *config.EchTunnel) {
+func (c *Controller) Refresh(log *logrus.Logger, global *config.Global, want *config.EchTunnel) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -112,15 +116,15 @@ func (c *echTunnelController) refresh(log *logrus.Logger, global *config.Global,
 	}()
 }
 
-// stop shuts the tunnel server down (process exit).
-func (c *echTunnelController) stop(log *logrus.Logger) {
+// Stop shuts the tunnel server down (process exit).
+func (c *Controller) Stop(log *logrus.Logger) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.conf = nil
 	c.stopLocked(log)
 }
 
-func (c *echTunnelController) stopLocked(log *logrus.Logger) {
+func (c *Controller) stopLocked(log *logrus.Logger) {
 	if c.client != nil {
 		c.client.StopProxyServer()
 		c.client = nil

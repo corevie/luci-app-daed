@@ -68,6 +68,24 @@ func ResolveSubscriptionAsBase64(log *logrus.Logger, b []byte) (nodes []string) 
 	return nodes
 }
 
+// ResolveSubscriptionAsPlaintext picks node links out of a plain (non-base64)
+// line list, one link per line. Blank lines and "#" comments are ignored, so
+// hand-written drop-ins under /etc/daed/nodes.d/<tag>.txt work as documented.
+func ResolveSubscriptionAsPlaintext(b []byte) (nodes []string) {
+	for line := range strings.SplitSeq(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		protocol, suffix, _ := strings.Cut(line, "://")
+		if len(protocol) == 0 || len(suffix) == 0 {
+			continue
+		}
+		nodes = append(nodes, line)
+	}
+	return nodes
+}
+
 func ResolveSubscriptionAsSIP008(log *logrus.Logger, b []byte) (nodes []string, err error) {
 	log.Debugln("Try to resolve as sip008")
 
@@ -250,6 +268,12 @@ resolve:
 			return tag, nodes, nil
 		}
 		return tag, nil, err
+	}
+	// Plain line lists (not base64) before the base64 fallback, whose decoder
+	// simply fails on them.
+	if nodes = ResolveSubscriptionAsPlaintext(b); len(nodes) > 0 {
+		log.Debugln("Resolved as plaintext link list")
+		return tag, nodes, nil
 	}
 	return tag, ResolveSubscriptionAsBase64(log, b), nil
 }
